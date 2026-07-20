@@ -1010,11 +1010,11 @@ export const Leads: React.FC = () => {
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      const url = URL.createObjectURL(doc.fileBlob);
+                                      const url = typeof doc.fileBlob === 'string' ? doc.fileBlob : URL.createObjectURL(doc.fileBlob);
                                       setPreviewDoc({
                                         name: doc.docType.replace('_', ' ').toUpperCase(),
                                         url,
-                                        type: doc.fileBlob.type
+                                        type: (doc.fileBlob as any)?.type || (url.includes('.pdf') ? 'application/pdf' : 'image/webp')
                                       });
                                     }}
                                     className="text-[10px] text-emerald-600 hover:text-emerald-800 font-black cursor-pointer"
@@ -1024,11 +1024,14 @@ export const Leads: React.FC = () => {
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      const url = URL.createObjectURL(doc.fileBlob);
+                                      const url = typeof doc.fileBlob === 'string' ? doc.fileBlob : URL.createObjectURL(doc.fileBlob);
                                       const a = document.createElement('a');
                                       a.href = url;
+                                      a.target = '_blank';
                                       a.download = `${doc.docType}_${selectedLead.name.replace(/\s+/g, '_')}`;
+                                      document.body.appendChild(a);
                                       a.click();
+                                      document.body.removeChild(a);
                                     }}
                                     className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer"
                                   >
