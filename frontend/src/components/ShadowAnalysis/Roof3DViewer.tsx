@@ -754,7 +754,7 @@ export const Roof3DViewer: React.FC<Roof3DViewerProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onWheel={handleWheel}
-        className="w-full flex-1 cursor-grab active:cursor-grabbing touch-none"
+        className="roof-3d-canvas w-full flex-1 cursor-grab active:cursor-grabbing touch-none"
       />
 
       {/* Top HUD: Title & Controls */}

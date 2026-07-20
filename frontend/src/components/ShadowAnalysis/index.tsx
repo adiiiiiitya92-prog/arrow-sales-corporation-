@@ -489,6 +489,17 @@ export const ShadowAnalysisContainer: React.FC = () => {
       return canvas.toDataURL('image/png');
     };
 
+    // Capture photorealistic 3D Satellite Map canvas image if active on screen
+    let img3DSatelliteMap = '';
+    const canvas3DElem = document.querySelector('.roof-3d-canvas') as HTMLCanvasElement || document.querySelector('canvas') as HTMLCanvasElement;
+    if (canvas3DElem) {
+      try {
+        img3DSatelliteMap = canvas3DElem.toDataURL('image/png');
+      } catch (err) {
+        console.warn("3D Map Canvas capture note:", err);
+      }
+    }
+
     const img3DIsometric = render3DSnapshot(-35, 32); // Angle 1: Isometric 3D
     const img3DSide = render3DSnapshot(45, 20);       // Angle 2: Side Elevation 3D
     const img3DTop = render3DSnapshot(0, 75);        // Angle 3: Top Rooftop 3D
@@ -604,6 +615,20 @@ export const ShadowAnalysisContainer: React.FC = () => {
                 </table>
               </div>
             </div>
+
+            <!-- Photorealistic 3D Satellite Map & Real Environment View -->
+            ${img3DSatelliteMap ? `
+              <div class="space-y-3 pt-2">
+                <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Photorealistic 3D Satellite Map & Real Environment View</h3>
+                <div class="bg-slate-950 p-3 rounded-3xl border border-slate-800 shadow-md text-center space-y-2">
+                  <img src="${img3DSatelliteMap}" class="w-full rounded-2xl border border-slate-800 max-h-[380px] object-cover" />
+                  <div class="flex justify-between items-center px-2 text-[9px] font-bold text-slate-400">
+                    <span>📍 Google Maps Satellite Neighborhood & Building Rooftop Deck 3D View</span>
+                    <span class="text-emerald-400">Environmental Solar Simulation</span>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
 
             <!-- 3D Building Views from Multiple Angles -->
             ${img3DIsometric ? `
