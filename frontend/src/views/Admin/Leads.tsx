@@ -12,8 +12,8 @@ import { Timeline } from '../../components/Pipeline/Timeline';
 import { SignatureCapture } from '../../components/Signature/SignatureCapture';
 import { LeafletMap } from '../../components/Map/LeafletMap';
 import imageCompression from 'browser-image-compression';
-import { compressImage } from '../../services/imageCompressorService';
-import { uploadToCloudflareR2 } from '../../services/cloudflareR2Service';
+import { compressImage } from '../../services/imageCompressionService';
+import { uploadImageToFirebase } from '../../services/firebase';
 import { DcrDocument } from './DcrDocument';
 import { WcrDocument } from './WcrDocument';
 import { ModelAgreementDocument } from './ModelAgreementDocument';
@@ -411,16 +411,11 @@ export const Leads: React.FC = () => {
 
     try {
       let processedBlob: Blob = file;
-      let filename = file.name;
-
       if (file.type.startsWith('image/')) {
-        const comp = await compressImage(file, { category: 'document' });
-        processedBlob = comp.blob;
-        filename = comp.fileName;
+        processedBlob = await compressImage(file, { isDocument: true, maxSizeKB: 75 });
+        const storagePath = `documents/${selectedLead.id}/${docType}_${Date.now()}.webp`;
+        await uploadImageToFirebase(processedBlob, storagePath);
       }
-
-      // Background upload to Cloudflare R2 Storage (10GB free tier)
-      uploadToCloudflareR2(processedBlob, filename, { path: `client_documents/${selectedLead.id}` });
 
       await orderService.uploadClientDocument({
         leadId: selectedLead.id,
@@ -429,7 +424,7 @@ export const Leads: React.FC = () => {
         uploadedBy: currentUser?.id || 'mock_admin'
       });
 
-      alert(`${docType.toUpperCase().replace('_', ' ')} successfully uploaded & compressed.`);
+      alert(`${docType.toUpperCase().replace('_', ' ')} successfully uploaded.`);
       handleSelectLead(selectedLead);
     } catch (err) {
       alert('File upload error.');
@@ -464,16 +459,11 @@ export const Leads: React.FC = () => {
 
     try {
       let processedBlob: Blob = file;
-      let filename = file.name;
-
       if (file.type.startsWith('image/')) {
-        const comp = await compressImage(file, { category: 'document' });
-        processedBlob = comp.blob;
-        filename = comp.fileName;
+        processedBlob = await compressImage(file, { isDocument: true, maxSizeKB: 75 });
+        const storagePath = `documents/${selectedLead.id}/bank_${Date.now()}.webp`;
+        await uploadImageToFirebase(processedBlob, storagePath);
       }
-
-      // Upload to Cloudflare R2
-      uploadToCloudflareR2(processedBlob, filename, { path: `bank_docs/${selectedLead.id}` });
 
       const updated = {
         ...regChecklist,
@@ -482,7 +472,7 @@ export const Leads: React.FC = () => {
       };
 
       await orderService.saveClientRegistration(updated);
-      alert('Bank document compressed & uploaded.');
+      alert('Bank document uploaded.');
       handleSelectLead(selectedLead);
     } catch (err) {
       alert('Error uploading bank document.');
@@ -503,42 +493,39 @@ export const Leads: React.FC = () => {
       const address = await mapService.reverseGeocode(coords.latitude, coords.longitude);
       setIsLocatingInstall(false);
 
-      // 2. Compress image file client-side (WebP ultra compression)
-      const comp = await compressImage(file, { category: 'site_photo' });
+      // 2. Compress image file client-side (target < 55 KB)
+      const compressed = await compressImage(file, { maxSizeKB: 55 });
 
       // 3. Stamp GPS coordinate metadata using HTML Canvas overlay watermarking
       const img = new Image();
-      img.src = comp.dataUrl;
+      img.src = URL.createObjectURL(compressed);
       img.onload = async () => {
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          // Draw base compressed image
           ctx.drawImage(img, 0, 0);
 
-          // Add a semitransparent black background strip at the bottom
           ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
           ctx.fillRect(0, img.height - 70, img.width, 70);
 
-          // Stamp location text
           ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 15px Arial';
           ctx.fillText(`GPS: ${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`, 20, img.height - 45);
           ctx.fillText(`Address: ${address.substring(0, 75)}...`, 20, img.height - 25);
           ctx.fillText(`Timestamp: ${dayjs().format('DD MMM YYYY, hh:mm A [IST]')}`, 20, img.height - 8);
 
-          // Convert canvas stamp back to compressed WebP Blob
           canvas.toBlob(async (blob) => {
             if (blob) {
-              // Async upload to Cloudflare R2 Storage (10GB free tier)
-              uploadToCloudflareR2(blob, comp.fileName, { path: `installations/${selectedLead.id}` });
+              const compBlob = await compressImage(blob, { maxSizeKB: 55 });
+              const storagePath = `installations/${selectedLead.id}/${installPhotoType}_${Date.now()}.webp`;
+              await uploadImageToFirebase(compBlob, storagePath);
 
               await orderService.uploadInstallationPhoto({
                 leadId: selectedLead.id,
                 photoType: installPhotoType,
-                photoBlob: blob,
+                photoBlob: compBlob,
                 location: {
                   latitude: coords.latitude,
                   longitude: coords.longitude,
@@ -548,10 +535,10 @@ export const Leads: React.FC = () => {
                 uploadedBy: currentUser?.id || 'mock_emp'
               });
 
-              alert(`Watermarked Installation photo (${installPhotoType.toUpperCase()}) compressed & saved!`);
+              alert(`Watermarked Installation photo (${installPhotoType.toUpperCase()}) uploaded to Firebase Storage!`);
               handleSelectLead(selectedLead);
             }
-          }, 'image/webp', 0.75);
+          }, 'image/jpeg', 0.95);
         }
       };
     } catch (err) {

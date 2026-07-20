@@ -1,8 +1,17 @@
 import { db } from './db';
 import type { Challan } from '../types';
+import { saveRecordToFirestore, fetchCollectionFromFirestore } from './firebase';
 
 export const challanService = {
   async getChallans(): Promise<Challan[]> {
+    try {
+      const remoteChallans = await fetchCollectionFromFirestore<Challan>('challans');
+      if (remoteChallans && remoteChallans.length > 0) {
+        await db.challans.bulkPut(remoteChallans);
+      }
+    } catch (err) {
+      console.warn("Firestore challans sync note:", err);
+    }
     return db.challans.orderBy('createdAt').reverse().toArray();
   },
 
@@ -19,24 +28,22 @@ export const challanService = {
       createdAt: new Date().toISOString()
     };
 
-    // Transaction to ensure atomic stock deduction
     await db.transaction('rw', [db.challans, db.products], async () => {
-      // 1. Save challan
       await db.challans.add(newChallan);
 
-      // 2. Subtract stock quantities for each item
       for (const item of cData.items) {
         const product = await db.products.get(item.productId);
         if (product) {
-          // Subtract stock quantity
           const updatedStock = Math.max(0, product.stockQuantity - item.qty);
           await db.products.update(item.productId, {
             stockQuantity: updatedStock
           });
+          saveRecordToFirestore('products', item.productId, { ...product, stockQuantity: updatedStock });
         }
       }
     });
 
+    saveRecordToFirestore('challans', id, newChallan);
     return id;
   },
 
@@ -51,29 +58,30 @@ export const challanService = {
     }
 
     await db.transaction('rw', [db.challans, db.products], async () => {
-      // 1. Revert old stock deduction
       for (const oldItem of oldChallan.items) {
         const product = await db.products.get(oldItem.productId);
         if (product) {
+          const revertedStock = product.stockQuantity + oldItem.qty;
           await db.products.update(oldItem.productId, {
-            stockQuantity: product.stockQuantity + oldItem.qty
+            stockQuantity: revertedStock
           });
         }
       }
 
-      // 2. Apply new stock deduction
       for (const newItem of updatedChallan.items) {
         const product = await db.products.get(newItem.productId);
         if (product) {
-          const updatedStock = Math.max(0, product.stockQuantity - newItem.qty);
+          const finalStock = Math.max(0, product.stockQuantity - newItem.qty);
           await db.products.update(newItem.productId, {
-            stockQuantity: updatedStock
+            stockQuantity: finalStock
           });
+          saveRecordToFirestore('products', newItem.productId, { ...product, stockQuantity: finalStock });
         }
       }
 
-      // 3. Save the updated challan record
       await db.challans.put(updatedChallan);
     });
+
+    saveRecordToFirestore('challans', id, updatedChallan);
   }
 };

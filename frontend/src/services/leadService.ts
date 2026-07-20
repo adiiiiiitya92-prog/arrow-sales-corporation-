@@ -1,8 +1,19 @@
 import { db } from './db';
 import type { Lead } from '../types';
+import { saveRecordToFirestore, deleteRecordFromFirestore, fetchCollectionFromFirestore } from './firebase';
 
 export const leadService = {
   async getLeads(): Promise<Lead[]> {
+    // 1. Sync latest from Firestore if online
+    try {
+      const remoteLeads = await fetchCollectionFromFirestore<Lead>('leads');
+      if (remoteLeads && remoteLeads.length > 0) {
+        await db.leads.bulkPut(remoteLeads);
+      }
+    } catch (err) {
+      console.warn("Firestore leads sync offline note:", err);
+    }
+    // 2. Return sorted from local Dexie database for 0ms latency UI
     return db.leads.orderBy('createdAt').reverse().toArray();
   },
 
@@ -19,13 +30,17 @@ export const leadService = {
       createdAt: now,
       updatedAt: now
     };
+
+    // Save locally & sync to Firestore
     await db.leads.add(newLead);
+    saveRecordToFirestore('leads', id, newLead);
     return id;
   },
 
   async updateLead(lead: Lead): Promise<void> {
     lead.updatedAt = new Date().toISOString();
     await db.leads.put(lead);
+    saveRecordToFirestore('leads', lead.id, lead);
   },
 
   async deleteLead(id: string): Promise<void> {
@@ -48,6 +63,8 @@ export const leadService = {
       await db.releaseDocuments.where({ leadId: id }).delete();
       await db.fieldVisitReports.where({ leadId: id }).delete();
     });
+
+    deleteRecordFromFirestore('leads', id);
   },
 
   async assignLead(leadId: string, employeeId: string | undefined): Promise<void> {
@@ -56,6 +73,7 @@ export const leadService = {
       lead.assignedEmployeeId = employeeId;
       lead.updatedAt = new Date().toISOString();
       await db.leads.put(lead);
+      saveRecordToFirestore('leads', leadId, lead);
     }
   },
 
@@ -65,6 +83,7 @@ export const leadService = {
       lead.status = status;
       lead.updatedAt = new Date().toISOString();
       await db.leads.put(lead);
+      saveRecordToFirestore('leads', leadId, lead);
     }
   },
 
@@ -74,6 +93,7 @@ export const leadService = {
       lead.clientRating = rating;
       lead.updatedAt = new Date().toISOString();
       await db.leads.put(lead);
+      saveRecordToFirestore('leads', leadId, lead);
     }
   }
 };

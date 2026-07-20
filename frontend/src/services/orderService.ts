@@ -1,5 +1,6 @@
 import { db } from './db';
 import type { OrderConfirmation, ClientDocument, ClientRegistration, InstallationPhoto, ReleaseDocument } from '../types';
+import { saveRecordToFirestore, deleteRecordFromFirestore, fetchCollectionFromFirestore } from './firebase';
 
 export const orderService = {
   // Order Confirmations
@@ -17,27 +18,30 @@ export const orderService = {
     await db.transaction('rw', [db.orderConfirmations, db.leads, db.clientRegistrations], async () => {
       await db.orderConfirmations.add(newOc);
       
-      // Update Lead Status to 'confirmed'
       const lead = await db.leads.get(ocData.leadId);
       if (lead) {
         lead.status = 'confirmed';
         lead.updatedAt = new Date().toISOString();
         await db.leads.put(lead);
+        saveRecordToFirestore('leads', lead.id, lead);
       }
 
-      // Initialize Client Registration Checklist if not exists
       const reg = await db.clientRegistrations.get(ocData.leadId);
       if (!reg) {
-        await db.clientRegistrations.add({
+        const newReg: ClientRegistration = {
           leadId: ocData.leadId,
           registrationDone: false,
           fileMade: false,
           bankFileUploaded: false,
           loanStatus: 'pending',
           updatedAt: new Date().toISOString()
-        });
+        };
+        await db.clientRegistrations.add(newReg);
+        saveRecordToFirestore('clientRegistrations', ocData.leadId, newReg);
       }
     });
+
+    saveRecordToFirestore('orderConfirmations', id, newOc);
     return id;
   },
 
@@ -51,18 +55,28 @@ export const orderService = {
     await db.transaction('rw', [db.clientRegistrations, db.leads], async () => {
       await db.clientRegistrations.put(registration);
       
-      // If registration is complete, check if we need to promote status
       const lead = await db.leads.get(registration.leadId);
       if (lead && lead.status === 'confirmed' && registration.registrationDone) {
         lead.status = 'registered';
         lead.updatedAt = new Date().toISOString();
         await db.leads.put(lead);
+        saveRecordToFirestore('leads', lead.id, lead);
       }
     });
+
+    saveRecordToFirestore('clientRegistrations', registration.leadId, registration);
   },
 
   // Client Documents (Slots: PAN, Aadhar, Bill, Tax, Bank etc)
   async getClientDocumentsByLeadId(leadId: string): Promise<ClientDocument[]> {
+    try {
+      const remoteDocs = await fetchCollectionFromFirestore<ClientDocument>('clientDocuments');
+      if (remoteDocs && remoteDocs.length > 0) {
+        await db.clientDocuments.bulkPut(remoteDocs);
+      }
+    } catch (err) {
+      console.warn("Firestore documents sync note:", err);
+    }
     return db.clientDocuments.where({ leadId }).toArray();
   },
 
@@ -73,12 +87,12 @@ export const orderService = {
       id,
       uploadedAt: new Date().toISOString()
     };
-    // If it is the bank file, toggle the checklist in registration
+
     await db.transaction('rw', [db.clientDocuments, db.clientRegistrations], async () => {
-      // Find if we already have a document of this type for this lead and overwrite it if so
       const existing = await db.clientDocuments.where({ leadId: docData.leadId, docType: docData.docType }).first();
       if (existing) {
         await db.clientDocuments.delete(existing.id);
+        deleteRecordFromFirestore('clientDocuments', existing.id);
       }
       await db.clientDocuments.add(newDoc);
 
@@ -88,9 +102,12 @@ export const orderService = {
           reg.bankFileUploaded = true;
           reg.updatedAt = new Date().toISOString();
           await db.clientRegistrations.put(reg);
+          saveRecordToFirestore('clientRegistrations', docData.leadId, reg);
         }
       }
     });
+
+    saveRecordToFirestore('clientDocuments', id, newDoc);
     return id;
   },
 
@@ -105,9 +122,12 @@ export const orderService = {
           reg.bankFileUploaded = false;
           reg.updatedAt = new Date().toISOString();
           await db.clientRegistrations.put(reg);
+          saveRecordToFirestore('clientRegistrations', doc.leadId, reg);
         }
       }
     });
+
+    deleteRecordFromFirestore('clientDocuments', id);
   },
 
   // Installation Photos
@@ -122,11 +142,8 @@ export const orderService = {
       id
     };
     await db.transaction('rw', [db.installationPhotos, db.leads], async () => {
-      // Add photo
       await db.installationPhotos.add(newPhoto);
 
-      // Check if they have uploaded the primary photo types (Earthing, Meter, Grouting)
-      // If yes, and lead status is registered, advance lead to 'installed'
       const photos = await db.installationPhotos.where({ leadId: photoData.leadId }).toArray();
       const types = photos.map(p => p.photoType);
       const hasRequired = ['earthing', 'meter', 'grouting'].every(type => types.includes(type as any));
@@ -136,13 +153,17 @@ export const orderService = {
         lead.status = 'installed';
         lead.updatedAt = new Date().toISOString();
         await db.leads.put(lead);
+        saveRecordToFirestore('leads', lead.id, lead);
       }
     });
+
+    saveRecordToFirestore('installationPhotos', id, newPhoto);
     return id;
   },
 
   async deleteInstallationPhoto(id: string): Promise<void> {
     await db.installationPhotos.delete(id);
+    deleteRecordFromFirestore('installationPhotos', id);
   },
 
   // Release Documents
@@ -160,14 +181,16 @@ export const orderService = {
     await db.transaction('rw', [db.releaseDocuments, db.leads], async () => {
       await db.releaseDocuments.add(newRel);
 
-      // Set lead status to 'closed' (representing completed pipeline release)
       const lead = await db.leads.get(relData.leadId);
       if (lead && lead.status === 'installed') {
         lead.status = 'closed';
         lead.updatedAt = new Date().toISOString();
         await db.leads.put(lead);
+        saveRecordToFirestore('leads', lead.id, lead);
       }
     });
+
+    saveRecordToFirestore('releaseDocuments', id, newRel);
     return id;
   }
 };

@@ -1,13 +1,29 @@
 import { db } from './db';
 import type { Profile } from '../types';
+import { saveRecordToFirestore, fetchCollectionFromFirestore } from './firebase';
 
 export const employeeService = {
   async getEmployees(): Promise<Profile[]> {
-    // Only return field employees and admins
+    try {
+      const remoteProfiles = await fetchCollectionFromFirestore<Profile>('profiles');
+      if (remoteProfiles && remoteProfiles.length > 0) {
+        await db.profiles.bulkPut(remoteProfiles);
+      }
+    } catch (err) {
+      console.warn("Firestore profiles sync note:", err);
+    }
     return db.profiles.where('role').anyOf(['admin', 'field_employee']).toArray();
   },
 
   async getAllProfiles(): Promise<Profile[]> {
+    try {
+      const remoteProfiles = await fetchCollectionFromFirestore<Profile>('profiles');
+      if (remoteProfiles && remoteProfiles.length > 0) {
+        await db.profiles.bulkPut(remoteProfiles);
+      }
+    } catch (err) {
+      console.warn("Firestore profiles sync note:", err);
+    }
     return db.profiles.toArray();
   },
 
@@ -20,6 +36,7 @@ export const employeeService = {
       createdAt: new Date().toISOString()
     };
     await db.profiles.add(newProfile);
+    saveRecordToFirestore('profiles', id, newProfile);
     return id;
   },
 
@@ -28,6 +45,7 @@ export const employeeService = {
     if (profile) {
       profile.isActive = !profile.isActive;
       await db.profiles.put(profile);
+      saveRecordToFirestore('profiles', id, profile);
     }
   }
 };

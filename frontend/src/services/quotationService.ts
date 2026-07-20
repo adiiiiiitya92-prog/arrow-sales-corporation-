@@ -1,8 +1,17 @@
 import { db } from './db';
 import type { Quotation } from '../types';
+import { saveRecordToFirestore, fetchCollectionFromFirestore } from './firebase';
 
 export const quotationService = {
   async getQuotations(): Promise<Quotation[]> {
+    try {
+      const remoteQuotes = await fetchCollectionFromFirestore<Quotation>('quotations');
+      if (remoteQuotes && remoteQuotes.length > 0) {
+        await db.quotations.bulkPut(remoteQuotes);
+      }
+    } catch (err) {
+      console.warn("Firestore quotations sync offline note:", err);
+    }
     return db.quotations.orderBy('createdAt').reverse().toArray();
   },
 
@@ -23,7 +32,6 @@ export const quotationService = {
     };
     await db.transaction('rw', [db.quotations, db.leads], async () => {
       await db.quotations.add(newQuotation);
-      // Automatically update lead status to quotation_sent if it's currently 'new'
       const lead = await db.leads.get(qData.leadId);
       if (lead && lead.status === 'new') {
         lead.status = 'quotation_sent';
@@ -31,11 +39,14 @@ export const quotationService = {
         await db.leads.put(lead);
       }
     });
+
+    saveRecordToFirestore('quotations', id, newQuotation);
     return id;
   },
 
   async updateQuotation(quotation: Quotation): Promise<void> {
     await db.quotations.put(quotation);
+    saveRecordToFirestore('quotations', quotation.id, quotation);
   },
 
   async markQuotationAsSent(id: string): Promise<void> {
@@ -44,6 +55,7 @@ export const quotationService = {
       quotation.sentViaWhatsapp = true;
       quotation.whatsappSentAt = new Date().toISOString();
       await db.quotations.put(quotation);
+      saveRecordToFirestore('quotations', id, quotation);
     }
   }
 };

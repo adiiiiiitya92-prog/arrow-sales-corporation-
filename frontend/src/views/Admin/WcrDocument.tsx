@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { leadService } from '../../services/leadService';
-import { compressImage } from '../../services/imageCompressorService';
-import { uploadToCloudflareR2 } from '../../services/cloudflareR2Service';
 import type { Lead } from '../../types';
 import {
   FileText,
@@ -17,6 +15,8 @@ import {
   CheckCircle2,
   Edit3
 } from 'lucide-react';
+import { compressImage } from '../../services/imageCompressionService';
+import { uploadImageToFirebase } from '../../services/firebase';
 
 export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolean }> = ({ defaultLeadId, isEmbedded }) => {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -857,15 +857,12 @@ export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
                       const file = e.target.files?.[0];
                       if (file) {
                         try {
-                          const comp = await compressImage(file, { category: 'document' });
-                          setAadharXeroxUrl(comp.dataUrl);
-                          uploadToCloudflareR2(comp.blob, comp.fileName, { path: 'wcr_aadhar' });
+                          const compFile = await compressImage(file, { isDocument: true, maxSizeKB: 75 });
+                          const storagePath = `wcr/aadhar_${Date.now()}.webp`;
+                          const url = await uploadImageToFirebase(compFile, storagePath);
+                          setAadharXeroxUrl(url);
                         } catch (err) {
-                          const reader = new FileReader();
-                          reader.onload = (evt) => {
-                            setAadharXeroxUrl(evt.target?.result as string);
-                          };
-                          reader.readAsDataURL(file);
+                          console.error(err);
                         }
                       }
                     }}

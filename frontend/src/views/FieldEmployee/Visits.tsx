@@ -4,12 +4,12 @@ import { visitService } from '../../services/visitService';
 import { leadService } from '../../services/leadService';
 import { employeeService } from '../../services/employeeService';
 import { mapService } from '../../services/mapService';
-import { compressImage } from '../../services/imageCompressorService';
-import { uploadToCloudflareR2 } from '../../services/cloudflareR2Service';
 import type { Coordinates } from '../../services/mapService';
 import type { FieldVisitReport, Lead, Profile } from '../../types';
 import { LeafletMap } from '../../components/Map/LeafletMap';
 import { Plus, MapPin, User, Compass, Upload, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { compressImage } from '../../services/imageCompressionService';
+import { uploadImageToFirebase } from '../../services/firebase';
 import dayjs from 'dayjs';
 
 export const Visits: React.FC = () => {
@@ -86,21 +86,26 @@ export const Visits: React.FC = () => {
     }
   };
 
+  const [isCompressing, setIsCompressing] = useState(false);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
+    if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
-      
-      const compressedResults = await Promise.all(
-        filesArray.map(file => compressImage(file, { category: 'site_photo' }))
-      );
-
-      // Async background upload to Cloudflare R2 Storage (10GB free tier)
-      compressedResults.forEach(res => {
-        uploadToCloudflareR2(res.blob, res.fileName, { path: 'visit_photos' });
-      });
-
-      const compressedBlobs = compressedResults.map(res => res.blob);
-      setUploadedPhotos(prev => [...prev, ...compressedBlobs]);
+      setIsCompressing(true);
+      try {
+        const compressedBlobs: Blob[] = [];
+        for (const file of filesArray) {
+          const compFile = await compressImage(file, { maxSizeKB: 55 });
+          const storagePath = `visits/${Date.now()}_${compFile.name}`;
+          await uploadImageToFirebase(compFile, storagePath);
+          compressedBlobs.push(compFile);
+        }
+        setUploadedPhotos(prev => [...prev, ...compressedBlobs]);
+      } catch (err) {
+        console.error("Compression / Firebase upload note:", err);
+      } finally {
+        setIsCompressing(false);
+      }
     }
   };
 
@@ -475,7 +480,9 @@ export const Visits: React.FC = () => {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   <Upload className="w-5 h-5 text-slate-400 mx-auto mb-1.5" />
-                  <p className="text-[10px] text-slate-400">Drag or click to choose pictures from camera/files.</p>
+                  <p className="text-[10px] text-slate-400">
+                    {isCompressing ? '⚡ Auto-compressing & uploading to Firebase Storage...' : 'Drag or click to choose pictures from camera/files.'}
+                  </p>
                 </div>
 
                 {uploadedPhotos.length > 0 && (
