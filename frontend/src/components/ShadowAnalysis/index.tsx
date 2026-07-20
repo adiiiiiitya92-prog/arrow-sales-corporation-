@@ -1,0 +1,834 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { GoogleMap, useJsApiLoader, Polygon, Polyline, Circle } from '@react-google-maps/api';
+import { ChevronRight, ChevronLeft, MapPin, Sun, ShieldAlert, Rotate3d } from 'lucide-react';
+
+import SiteMapPicker from './SiteMapPicker';
+import RoofPolygonDrawer from './RoofPolygonDrawer';
+import ObstructionMarker from './ObstructionMarker';
+import PanelOverlay from './PanelOverlay';
+import ShadowAnalysisResults from './ShadowAnalysisResults';
+import Roof3DViewer from './Roof3DViewer';
+
+import { calculatePanelLayout } from '../../services/panelLayoutService';
+import type {
+  PanelSpec,
+  LayoutConfig,
+  Obstruction,
+  FittedPanel
+} from '../../services/panelLayoutService';
+import { calculateShading } from '../../services/shadowAnalysisService';
+import { latLngToMeters } from '../../services/geometryUtils';
+
+// Only request geometry library (drawing & places are deprecated legacy APIs)
+const libraries: "geometry"[] = ['geometry'];
+
+export const ShadowAnalysisContainer: React.FC = () => {
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: 'AIzaSyDcjbZggQipAnCQiVDL_GekJ7k-BjKGXdw',
+    libraries
+  });
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [siteLatLng, setSiteLatLng] = useState<google.maps.LatLngLiteral | null>(null);
+  const [address, setAddress] = useState('');
+  const [mapZoom, setMapZoom] = useState(19);
+
+  // Geometry outlines & elements
+  const [polygonPath, setPolygonPath] = useState<google.maps.LatLngLiteral[]>([]);
+  const [polygonInstance, setPolygonInstance] = useState<google.maps.Polygon | null>(null);
+  const [obstructions, setObstructions] = useState<Obstruction[]>([]);
+  const [activeObsId, setActiveObsId] = useState<string | null>(null);
+
+  // View Mode Controller
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
+
+  // Drawing Custom Obstructions State
+  const [isDrawingObs, setIsDrawingObs] = useState(false);
+  const [activeObsPath, setActiveObsPath] = useState<google.maps.LatLngLiteral[]>([]);
+  const [obsDrawingType, setObsDrawingType] = useState<'cylinder' | 'polygon'>('cylinder');
+  const [activeObsHeight, setActiveObsHeight] = useState(2.0);
+  const [activeObsName, setActiveObsName] = useState('Lift Room Structure');
+
+  // Fitting Parameters & Specs
+  const [panelSpec, setPanelSpec] = useState<PanelSpec>({
+    width: 1.13,  // default standard E-W size for 550W panel
+    length: 2.28, // default standard N-S size for 550W panel
+    wattage: 550  // standard Indian panel wattage
+  });
+
+  const [layoutConfig, setLayoutConfig] = useState<LayoutConfig>({
+    setback: 0.5,       // default standard setback margin
+    rowSpacing: 0.02,   // 2cm row boundary spacer
+    colSpacing: 0.02,   // 2cm column spacer
+    orientation: 'portrait'
+  });
+
+  // Calculation Results
+  const [fittedPanels, setFittedPanels] = useState<FittedPanel[]>([]);
+  const [totalRoofArea, setTotalRoofArea] = useState(0);
+  const [systemSizeKw, setSystemSizeKw] = useState(0);
+  const [overallShadingLoss, setOverallShadingLoss] = useState(0);
+  const [usablePanels, setUsablePanels] = useState(0);
+  const [excludedPanels, setExcludedPanels] = useState(0);
+
+  const [, setMapRef] = useState<google.maps.Map | null>(null);
+
+  // 1. Calculate Roof Area when polygon changes
+  useEffect(() => {
+    if (polygonPath.length >= 3 && window.google) {
+      const googleMaps = window.google.maps;
+      const gPath = polygonPath.map(p => new googleMaps.LatLng(p.lat, p.lng));
+      const area = googleMaps.geometry.spherical.computeArea(gPath);
+      setTotalRoofArea(area);
+    } else {
+      setTotalRoofArea(0);
+    }
+  }, [polygonPath]);
+
+  // 2. Recalculate Panel Layout and Shading
+  const performAnalysis = useCallback(() => {
+    if (polygonPath.length >= 3 && siteLatLng && window.google) {
+      const googleMaps = window.google.maps;
+
+      // Merge active drawing path to dynamically avoid polygon obstructions during active drawing
+      let currentObs = [...obstructions];
+      if (isDrawingObs && obsDrawingType === 'polygon' && activeObsPath.length >= 3) {
+        currentObs.push({
+          id: 'temp_active_obs',
+          type: 'polygon',
+          lat: siteLatLng.lat,
+          lng: siteLatLng.lng,
+          heightMeters: activeObsHeight,
+          widthMeters: 0,
+          path: activeObsPath
+        });
+      }
+
+      // Fit panels on roof
+      const layoutResult = calculatePanelLayout(
+        polygonPath,
+        panelSpec,
+        layoutConfig,
+        currentObs,
+        googleMaps
+      );
+
+      // Perform shading simulation
+      const shadingResult = calculateShading(
+        layoutResult.panels,
+        currentObs,
+        siteLatLng,
+        googleMaps
+      );
+
+      // Filter out highly-shaded panels (shading loss > 40%) to optimize layout based on height shadows
+      const activePanels = shadingResult.panels.filter(p => p.isRecommended);
+      setFittedPanels(activePanels);
+      setUsablePanels(shadingResult.usablePanelsCount);
+      setExcludedPanels(shadingResult.totalNotRecommended);
+      setSystemSizeKw(shadingResult.usablePanelsCount * panelSpec.wattage / 1000);
+      setOverallShadingLoss(shadingResult.overallShadingLoss);
+    } else {
+      setFittedPanels([]);
+      setUsablePanels(0);
+      setExcludedPanels(0);
+      setSystemSizeKw(0);
+      setOverallShadingLoss(0);
+    }
+  }, [polygonPath, siteLatLng, panelSpec, layoutConfig, obstructions, isDrawingObs, obsDrawingType, activeObsPath, activeObsHeight]);
+
+  const handlePolygonEdit = useCallback(() => {
+    if (polygonInstance) {
+      const path = polygonInstance.getPath();
+      const coords: google.maps.LatLngLiteral[] = [];
+      for (let i = 0; i < path.getLength(); i++) {
+        coords.push({ lat: path.getAt(i).lat(), lng: path.getAt(i).lng() });
+      }
+      setPolygonPath(coords);
+    }
+  }, [polygonInstance]);
+
+  // Trigger analysis automatically on changes
+  useEffect(() => {
+    performAnalysis();
+  }, [performAnalysis]);
+
+  const handleAddressSelect = (lat: number, lng: number, formattedAddress: string) => {
+    setSiteLatLng({ lat, lng });
+    setAddress(formattedAddress);
+    setMapZoom(20);
+    // Clear out old traces
+    setPolygonPath([]);
+    setObstructions([]);
+    setCurrentStep(2);
+  };
+
+  const handleExportPDF = useCallback(() => {
+    // 1. Generate SVG Layout Schematic
+    let layoutSVG = '';
+    if (polygonPath.length >= 3 && window.google) {
+      const origin = polygonPath[0];
+      const googleMaps = window.google.maps;
+      const localPoly = polygonPath.map(pt => latLngToMeters(pt, origin, googleMaps));
+
+      let minX = Infinity, maxX = -Infinity;
+      let minY = Infinity, maxY = -Infinity;
+      localPoly.forEach(p => {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      });
+
+      const padding = 6;
+      minX -= padding;
+      maxX += padding;
+      minY -= padding;
+      maxY += padding;
+
+      const width = maxX - minX;
+      const height = maxY - minY;
+
+      const getSVGCoords = (pt: { x: number; y: number }) => {
+        const x = pt.x - minX;
+        const y = maxY - pt.y; // Invert Y for SVG coordinates
+        return `${x.toFixed(2)},${y.toFixed(2)}`;
+      };
+
+      const roofPointsStr = localPoly.map(getSVGCoords).join(' ');
+
+      layoutSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" style="width: 100%; max-height: 380px; background: #0f172a; border-radius: 24px; border: 1.5px solid #1e293b; padding: 12px;">`;
+
+      // Draw grid lines
+      for (let x = Math.ceil(minX); x < maxX; x += 3) {
+        const sx = x - minX;
+        layoutSVG += `<line x1="${sx}" y1="0" x2="${sx}" y2="${height}" stroke="rgba(255,255,255,0.03)" stroke-width="0.15"/>`;
+      }
+      for (let y = Math.ceil(minY); y < maxY; y += 3) {
+        const sy = maxY - y;
+        layoutSVG += `<line x1="0" y1="${sy}" x2="${width}" y2="${sy}" stroke="rgba(255,255,255,0.03)" stroke-width="0.15"/>`;
+      }
+
+      // Draw roof slab boundary
+      layoutSVG += `<polygon points="${roofPointsStr}" fill="rgba(30, 41, 59, 0.45)" stroke="#10b981" stroke-width="0.8" stroke-linejoin="round" />`;
+
+      // Draw obstructions
+      obstructions.forEach(obs => {
+        if (obs.type === 'polygon' && obs.path && obs.path.length >= 3) {
+          const obsLocal = obs.path.map(pt => latLngToMeters(pt, origin, googleMaps));
+          const obsPtsStr = obsLocal.map(getSVGCoords).join(' ');
+          layoutSVG += `<polygon points="${obsPtsStr}" fill="rgba(239, 68, 68, 0.3)" stroke="#ef4444" stroke-width="0.6" stroke-linejoin="round" />`;
+        } else {
+          const localPos = latLngToMeters({ lat: obs.lat, lng: obs.lng }, origin, googleMaps);
+          const cx = localPos.x - minX;
+          const cy = maxY - localPos.y;
+          const r = obs.widthMeters / 2;
+          layoutSVG += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(239, 68, 68, 0.3)" stroke="#ef4444" stroke-width="0.6" />`;
+        }
+      });
+
+      // Draw panels
+      fittedPanels.forEach(panel => {
+        const pts = panel.localBounds.map(getSVGCoords).join(' ');
+        layoutSVG += `<polygon points="${pts}" fill="#1d4ed8" stroke="#1e3a8a" stroke-width="0.35" />`;
+        
+        // Draw crosshair cell lines inside panel
+        const c1 = panel.localBounds[0];
+        const c2 = panel.localBounds[1];
+        const c3 = panel.localBounds[2];
+        const c4 = panel.localBounds[3];
+
+        const mLeftX = (c1.x + c4.x) / 2;
+        const mLeftY = (c1.y + c4.y) / 2;
+        const mRightX = (c2.x + c3.x) / 2;
+        const mRightY = (c2.y + c3.y) / 2;
+
+        const mBotX = (c1.x + c2.x) / 2;
+        const mBotY = (c1.y + c2.y) / 2;
+        const mTopX = (c3.x + c4.x) / 2;
+        const mTopY = (c3.y + c4.y) / 2;
+
+        const pLeft = getSVGCoords({ x: mLeftX, y: mLeftY });
+        const pRight = getSVGCoords({ x: mRightX, y: mRightY });
+        const pBot = getSVGCoords({ x: mBotX, y: mBotY });
+        const pTop = getSVGCoords({ x: mTopX, y: mTopY });
+
+        layoutSVG += `<line x1="${pLeft.split(',')[0]}" y1="${pLeft.split(',')[1]}" x2="${pRight.split(',')[0]}" y2="${pRight.split(',')[1]}" stroke="rgba(255,255,255,0.3)" stroke-width="0.08" />`;
+        layoutSVG += `<line x1="${pBot.split(',')[0]}" y1="${pBot.split(',')[1]}" x2="${pTop.split(',')[0]}" y2="${pTop.split(',')[1]}" stroke="rgba(255,255,255,0.3)" stroke-width="0.08" />`;
+      });
+
+      // Add Compass Rose indicator (North arrow) at bottom right
+      const compX = width - 12;
+      const compY = height - 12;
+      if (compX > 25 && compY > 25) {
+        layoutSVG += `
+          <g transform="translate(${compX}, ${compY})">
+            <circle cx="0" cy="0" r="8" fill="#1e293b" stroke="#475569" stroke-width="0.6"/>
+            <line x1="0" y1="6" x2="0" y2="-6" stroke="#ef4444" stroke-width="1.0"/>
+            <polygon points="0,-6 -2,-1 2,-1" fill="#ef4444"/>
+            <text x="-2.5" y="-8" fill="#ffffff" font-size="4" font-family="sans-serif" font-weight="bold">N</text>
+          </g>
+        `;
+      }
+
+      layoutSVG += `</svg>`;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Failed to open print window. Please allow popups for this site.");
+      return;
+    }
+
+    const sunEfficiency = 100 - overallShadingLoss;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>SolarCRM - Shadow Analysis Proposal</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            @media print {
+              .no-print { display: none; }
+              body { font-family: sans-serif; padding: 20px; }
+            }
+          </style>
+        </head>
+        <body class="bg-slate-50 text-slate-800 p-8">
+          <div class="max-w-4xl mx-auto space-y-6 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+            <!-- Header -->
+            <div class="flex justify-between items-center border-b-2 border-emerald-500 pb-4">
+              <div>
+                <h1 class="text-3xl font-black text-slate-900">SolarCRM</h1>
+                <p class="text-xs text-slate-550 font-bold">Arrow Sales Corporation - Site Proposal</p>
+              </div>
+              <div class="text-right">
+                <span class="bg-emerald-100 text-emerald-800 text-xs font-extrabold px-3 py-1 rounded-full uppercase">Proposal Draft</span>
+                <p class="text-xs text-slate-500 mt-1 font-semibold">Date: ${new Date().toLocaleDateString()}</p>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <div class="text-center py-4">
+              <h2 class="text-xl font-black text-slate-900 tracking-tight">Solar Feasibility & Shading Analysis Report</h2>
+              <p class="text-xs text-slate-500 font-semibold mt-1">Generated automatically via SolarCRM site estimator</p>
+            </div>
+
+            <!-- Site details -->
+            <div class="grid grid-cols-2 gap-6 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+              <div>
+                <h3 class="text-[10px] text-slate-400 font-black uppercase tracking-wider">Project Address</h3>
+                <p class="text-xs font-bold text-slate-800 mt-1 leading-relaxed">${address || 'Manual Coordinate Site'}</p>
+              </div>
+              <div>
+                <h3 class="text-[10px] text-slate-400 font-black uppercase tracking-wider">Coordinates</h3>
+                <p class="text-xs font-bold text-slate-850 mt-1">${siteLatLng ? `${siteLatLng.lat.toFixed(6)}, ${siteLatLng.lng.toFixed(6)}` : 'N/A'}</p>
+              </div>
+            </div>
+
+            <!-- Metrics Summary -->
+            <div class="grid grid-cols-3 gap-4">
+              <div class="bg-emerald-800 text-white p-5 rounded-2xl text-center shadow-sm">
+                <span class="text-[9px] text-emerald-300 font-extrabold uppercase tracking-wider">Designed System</span>
+                <h2 class="text-2xl font-black mt-1">${systemSizeKw.toFixed(2)} kWp</h2>
+                <p class="text-[9px] text-emerald-200 mt-0.5 font-semibold">Estimated Max System Size</p>
+              </div>
+              <div class="bg-slate-900 text-white p-5 rounded-2xl text-center shadow-sm">
+                <span class="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider font-semibold">Recommended Panels</span>
+                <h2 class="text-2xl font-black mt-1">${usablePanels} / ${fittedPanels.length + excludedPanels}</h2>
+                <p class="text-[9px] text-slate-400 mt-0.5 font-semibold">Excluded ${excludedPanels} shaded panels</p>
+              </div>
+              <div class="bg-slate-950 text-white p-5 rounded-2xl text-center shadow-sm font-semibold">
+                <span class="text-[9px] text-amber-400 font-extrabold uppercase tracking-wider">Sun Capture Efficiency</span>
+                <h2 class="text-2xl font-black text-amber-400 mt-1">${sunEfficiency}%</h2>
+                <p class="text-[9px] text-slate-400 mt-0.5">Average shading loss: ${overallShadingLoss}%</p>
+              </div>
+            </div>
+
+            <!-- Detailed Specifications -->
+            <div class="space-y-3">
+              <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Technical Details</h3>
+              <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                      <th class="p-3">Specification Parameter</th>
+                      <th class="p-3 text-right">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody class="text-xs font-semibold text-slate-700 divide-y divide-slate-200 leading-relaxed">
+                    <tr>
+                      <td class="p-3 text-slate-550">Total Usable Roof Area</td>
+                      <td class="p-3 text-right text-slate-800">${totalRoofArea.toFixed(1)} m² (${Math.round(totalRoofArea * 10.7639).toLocaleString()} sqft)</td>
+                    </tr>
+                    <tr>
+                      <td class="p-3 text-slate-550">Panel Dimensions</td>
+                      <td class="p-3 text-right text-slate-800">${panelSpec.width}m (W) x ${panelSpec.length}m (L)</td>
+                    </tr>
+                    <tr>
+                      <td class="p-3 text-slate-550">Panel Peak Peak Wattage</td>
+                      <td class="p-3 text-right text-slate-800">${panelSpec.wattage} W</td>
+                    </tr>
+                    <tr>
+                      <td class="p-3 text-slate-550">Safety Setback Boundary Margin</td>
+                      <td class="p-3 text-right text-slate-800">${layoutConfig.setback} m</td>
+                    </tr>
+                    <tr>
+                      <td class="p-3 text-slate-550">Grid Gaps (Row / Column)</td>
+                      <td class="p-3 text-right text-slate-800">${layoutConfig.rowSpacing}m / ${layoutConfig.colSpacing}m</td>
+                    </tr>
+                    <tr>
+                      <td class="p-3 text-slate-550">Placement Orientation Mode</td>
+                      <td class="p-3 text-right text-slate-800 capitalize">${layoutConfig.orientation}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Roof Layout Map Vector Diagram -->
+            <div class="space-y-3">
+              <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Calculated Solar Array Layout</h3>
+              <div class="flex justify-center bg-slate-950 p-2 rounded-3xl border border-slate-800 shadow-inner">
+                ${layoutSVG}
+              </div>
+              <p class="text-[9px] text-slate-500 font-semibold text-center italic">
+                Blue rectangles represent optimal panel modules. Red shapes/circles outline marked structures.
+              </p>
+            </div>
+
+            <!-- Footnote Disclaimer -->
+            <div class="bg-amber-50/50 border border-amber-250/60 p-4 rounded-2xl text-[9px] text-amber-800 font-semibold leading-relaxed">
+              <strong>Disclaimer:</strong> This layout and shading analysis is generated based on satellite imagery, local sun path models, and user-marked obstructions. Shading score forecasts represent general patterns and might vary due to cloud coverage, dirt accumulations, and building shape variances. A manual onsite measurement is recommended before finalizing the system designs.
+            </div>
+
+            <!-- Print Action -->
+            <div class="no-print flex justify-between items-center pt-4 border-t border-slate-100">
+              <a href="https://api.whatsapp.com/send?text=${encodeURIComponent(
+                `*Solar CRM - Installation Proposal* ☀️\n📍 *Address:* ${address || 'Manual Coordinate Site'}\n⚡ *System Size:* ${systemSizeKw.toFixed(2)} kWp\n💎 *Recommended Panels:* ${usablePanels} modules`
+              )}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-6 py-3.5 rounded-xl shadow-md transition-all cursor-pointer flex items-center space-x-1.5 no-underline">
+                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.464L0 24zm6.59-4.846c1.6.95 3.198 1.451 4.796 1.452 5.518 0 9.986-4.477 9.989-9.999.002-2.675-1.03-5.19-2.903-7.07C16.559 1.65 14.07 0.61 11.458 0.61c-5.522 0-10.014 4.495-10.016 10.02-.001 1.705.452 3.37 1.31 4.86L1.71 21.05l5.77-1.516c-1.125-.626-2.28-1.52-2.83-2.046z"/>
+                  <path d="M17.487 14.39c-.27-.136-1.602-.79-1.85-.88-.25-.09-.43-.136-.61.136-.18.27-.69.88-.85 1.06-.15.18-.3.2-.57.064-.27-.135-1.137-.42-2.167-1.34-.8-.713-1.34-1.595-1.5-1.86-.15-.27-.015-.415.12-.55.125-.124.27-.315.405-.47.135-.16.18-.27.27-.45.09-.18.045-.34-.02-.47-.07-.13-.61-1.47-.83-2.01-.22-.53-.44-.45-.61-.46h-.52c-.18 0-.47.07-.72.34-.25.27-.95.93-.95 2.27s.97 2.63 1.11 2.82c.14.19 1.9 2.9 4.6 4.07.64.28 1.14.45 1.53.57.65.2 1.24.18 1.7.11.52-.08 1.6-.66 1.83-1.29.23-.63.23-1.18.16-1.29-.07-.12-.27-.18-.54-.315z"/>
+                </svg>
+                <span>Share Proposal on WhatsApp</span>
+              </a>
+              <button onclick="window.print();" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-6 py-3 rounded-xl shadow-md transition-all cursor-pointer">
+                Generate & Save PDF Report
+              </button>
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+  }, [address, siteLatLng, systemSizeKw, usablePanels, fittedPanels, overallShadingLoss, totalRoofArea, panelSpec, layoutConfig]);
+
+  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+    if (e.latLng && siteLatLng) {
+      if (currentStep === 2) {
+        // Custom drawing: append new vertex coordinates on click
+        const newVertex = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        setPolygonPath(prev => [...prev, newVertex]);
+      } else if (currentStep === 3) {
+        if (isDrawingObs && obsDrawingType === 'polygon') {
+          // Custom drawing polygon obstruction: append vertex coordinates
+          const newVertex = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+          setActiveObsPath(prev => [...prev, newVertex]);
+        } else {
+          // Standard cylinder marker placement on click
+          const newObs: Obstruction = {
+            id: `obs_${Date.now()}`,
+            type: 'tank',
+            lat: e.latLng.lat(),
+            lng: e.latLng.lng(),
+            heightMeters: 2.0, // standard 2m height
+            widthMeters: 2.0  // standard 2m diameter
+          };
+          setObstructions([...obstructions, newObs]);
+          setActiveObsId(newObs.id);
+        }
+      }
+    }
+  };
+
+  const handleObstructionUpdate = (id: string, updatedFields: Partial<Obstruction>) => {
+    setObstructions(prev =>
+      prev.map(obs => (obs.id === id ? { ...obs, ...updatedFields } : obs))
+    );
+  };
+
+  const handleObstructionDelete = (id: string) => {
+    setObstructions(prev => prev.filter(obs => obs.id !== id));
+    if (activeObsId === id) setActiveObsId(null);
+  };
+
+  const nextStep = () => {
+    if (currentStep === 1 && !siteLatLng) return;
+    if (currentStep === 2 && polygonPath.length < 3) return;
+    setCurrentStep(prev => prev + 1);
+  };
+
+  const prevStep = () => {
+    if (currentStep === 3) {
+      // Clear obstructions when going back to the tracing step (Step 2)
+      setObstructions([]);
+      setIsDrawingObs(false);
+      setActiveObsPath([]);
+      setActiveObsId(null);
+    }
+    setCurrentStep(prev => prev - 1);
+  };
+
+  if (loadError) {
+    return (
+      <div className="bg-rose-50 border border-rose-200/80 rounded-2xl p-6 text-center text-rose-700 space-y-3">
+        <ShieldAlert className="w-8 h-8 text-rose-500 mx-auto" />
+        <h4 className="font-extrabold text-sm">Google Maps Loading Error</h4>
+        <p className="text-xs font-semibold text-rose-605">
+          Failed to load Google Maps SDK. Please check your network and API key: {loadError.message}
+        </p>
+      </div>
+    );
+  }
+
+  const stepsList = [
+    { label: 'Search Address', active: currentStep === 1, done: currentStep > 1 },
+    { label: 'Roof Tracing', active: currentStep === 2, done: currentStep > 2 },
+    { label: 'Obstructions', active: currentStep === 3, done: currentStep > 3 },
+    { label: 'Shading Report', active: currentStep === 4, done: currentStep > 4 }
+  ];
+
+  return (
+    <div className="h-[calc(100vh-140px)] flex flex-col lg:flex-row bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
+      {/* SIDEBAR VIEW CONTROLLER */}
+      <div className="w-full lg:w-[400px] flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-200 shrink-0 bg-slate-50/20">
+        <div className="p-5 space-y-6 overflow-y-auto flex-1">
+          {/* Header */}
+          <div>
+            <span className="text-[9px] text-emerald-600 font-black uppercase tracking-wider block">
+              Feature Module
+            </span>
+            <h2 className="text-lg font-black text-slate-900 tracking-tight flex items-center space-x-1.5 mt-0.5">
+              <Sun className="w-5 h-5 text-emerald-600 animate-pulse" />
+              <span>Roof Shadow Analysis</span>
+            </h2>
+          </div>
+
+          {/* Stepper Wizard Indicator */}
+          <div className="flex items-center space-x-1 border-t border-b border-slate-100 py-3.5 select-none overflow-x-auto">
+            {stepsList.map((step, idx) => (
+              <React.Fragment key={idx}>
+                <div className="flex items-center space-x-1.5">
+                  <div
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black border transition-all shrink-0 ${
+                      step.active
+                        ? 'bg-emerald-600 border-emerald-600 text-white ring-4 ring-emerald-500/10'
+                        : step.done
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        : 'bg-white border-slate-200 text-slate-400'
+                    }`}
+                  >
+                    {idx + 1}
+                  </div>
+                  <span
+                    className={`text-[9px] font-black tracking-tight whitespace-nowrap ${
+                      step.active ? 'text-slate-800' : 'text-slate-400 font-semibold'
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+                {idx < stepsList.length - 1 && <div className="w-2.5 border-t border-slate-200 shrink-0 mx-1"></div>}
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* STEP CONTENTS */}
+          <div className="pt-2">
+            {currentStep === 1 && (
+              <SiteMapPicker
+                onAddressSelect={handleAddressSelect}
+                isLoaded={isLoaded}
+              />
+            )}
+
+            {currentStep === 2 && (
+              <RoofPolygonDrawer
+                polygonPath={polygonPath}
+                onPolygonChange={setPolygonPath}
+                onClear={() => setPolygonPath([])}
+                areaSqm={totalRoofArea}
+              />
+            )}
+
+            {currentStep === 3 && (
+              <ObstructionMarker
+                obstructions={obstructions}
+                onObstructionUpdate={handleObstructionUpdate}
+                onObstructionDelete={handleObstructionDelete}
+                activeId={activeObsId}
+                setActiveId={setActiveObsId}
+                isDrawingObs={isDrawingObs}
+                setIsDrawingObs={setIsDrawingObs}
+                activeObsPath={activeObsPath}
+                setActiveObsPath={setActiveObsPath}
+                obsDrawingType={obsDrawingType}
+                setObsDrawingType={setObsDrawingType}
+                activeObsHeight={activeObsHeight}
+                setActiveObsHeight={setActiveObsHeight}
+                activeObsName={activeObsName}
+                setActiveObsName={setActiveObsName}
+                onSavePolygonObs={() => {
+                  if (activeObsPath.length < 3) {
+                    alert("Please click the satellite map to place at least 3 points before saving.");
+                    return;
+                  }
+                  // Calculate average center location
+                  let sumLat = 0, sumLng = 0;
+                  activeObsPath.forEach(pt => {
+                    sumLat += pt.lat;
+                    sumLng += pt.lng;
+                  });
+                  const avgLat = sumLat / activeObsPath.length;
+                  const avgLng = sumLng / activeObsPath.length;
+
+                  const newObs: Obstruction = {
+                    id: `obs_${Date.now()}`,
+                    type: 'polygon',
+                    lat: avgLat,
+                    lng: avgLng,
+                    heightMeters: activeObsHeight,
+                    widthMeters: 0, // not used
+                    path: activeObsPath
+                  };
+                  setObstructions(prev => [...prev, newObs]);
+                  setIsDrawingObs(false);
+                  setActiveObsPath([]);
+                  setActiveObsId(newObs.id);
+                }}
+              />
+            )}
+
+            {currentStep === 4 && (
+              <ShadowAnalysisResults
+                panelSpec={panelSpec}
+                setPanelSpec={setPanelSpec}
+                layoutConfig={layoutConfig}
+                setLayoutConfig={setLayoutConfig}
+                totalRoofArea={totalRoofArea}
+                totalPanels={fittedPanels.length + excludedPanels}
+                usablePanels={usablePanels}
+                excludedPanels={excludedPanels}
+                systemSizeKw={systemSizeKw}
+                overallShadingLoss={overallShadingLoss}
+                onRecalculate={performAnalysis}
+                onExport={handleExportPDF}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* STEP BUTTON FOOTER */}
+        <div className="p-4 border-t border-slate-200/80 bg-white flex justify-between select-none">
+          <button
+            onClick={prevStep}
+            disabled={currentStep === 1}
+            className="flex items-center space-x-1 text-[10px] border border-slate-200 hover:border-slate-350 hover:bg-slate-50 text-slate-600 font-extrabold px-3 py-2.5 rounded-xl transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+
+          <button
+            onClick={nextStep}
+            disabled={
+              (currentStep === 1 && !siteLatLng) ||
+              (currentStep === 2 && polygonPath.length < 3) ||
+              currentStep === 4
+            }
+            className="flex items-center space-x-1 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4.5 py-2.5 rounded-xl transition-all shadow-md shadow-emerald-600/10 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span>Continue</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* SATELLITE MAP PANEL */}
+      <div className="flex-1 min-h-[400px] lg:h-full relative bg-slate-900">
+        {!siteLatLng && (
+          <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-8 bg-slate-900 text-slate-400 z-10 space-y-3 select-none">
+            <div className="bg-slate-800 p-4 rounded-3xl border border-slate-700">
+              <MapPin className="w-8 h-8 text-emerald-500 animate-bounce" />
+            </div>
+            <h3 className="text-white font-black text-sm tracking-tight">No Site Selected</h3>
+            <p className="text-xs text-slate-500 font-medium max-w-xs leading-relaxed">
+              Please search and select a project address in Step 1 to load satellite imagery and start tracing.
+            </p>
+          </div>
+        )}
+
+        {/* Map / 3D Toggle Tab Bar */}
+        {siteLatLng && polygonPath.length >= 3 && (
+          <div className="absolute top-4 right-4 z-20 bg-slate-900/95 border border-slate-800 p-1 rounded-2xl flex items-center space-x-1 shadow-lg backdrop-blur-md">
+            <button
+              onClick={() => setViewMode('2d')}
+              className={`text-[10px] font-black px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                viewMode === '2d'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              2D Map view
+            </button>
+            <button
+              onClick={() => setViewMode('3d')}
+              className={`text-[10px] font-black px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 ${
+                viewMode === '3d'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Rotate3d className="w-3.5 h-3.5" />
+              <span>3D Model</span>
+            </button>
+          </div>
+        )}
+
+        {viewMode === '3d' ? (
+          <Roof3DViewer
+            roofPolygon={polygonPath}
+            panels={fittedPanels}
+            obstructions={obstructions}
+          />
+        ) : (
+          isLoaded && siteLatLng && (
+            <GoogleMap
+              mapContainerClassName="w-full h-full"
+              center={siteLatLng}
+              zoom={mapZoom}
+              onLoad={(map) => setMapRef(map)}
+              onUnmount={() => setMapRef(null)}
+              onClick={handleMapClick}
+              options={{
+                mapTypeId: 'satellite',
+                tilt: 0,
+                maxZoom: 21,
+                minZoom: 2,
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
+                zoomControl: true,
+                zoomControlOptions: {
+                  position: window.google?.maps.ControlPosition.RIGHT_BOTTOM
+                }
+              }}
+            >
+              {/* Draw roof outline on map */}
+              {polygonPath.length > 0 && (
+                <Polygon
+                  path={polygonPath}
+                  onLoad={(poly) => setPolygonInstance(poly)}
+                  onUnmount={() => setPolygonInstance(null)}
+                  onMouseUp={handlePolygonEdit}
+                  onDragEnd={handlePolygonEdit}
+                  options={{
+                    fillColor: '#10b981',
+                    fillOpacity: currentStep === 2 ? 0.25 : 0.0, // transparent in step 3 & 4 to show blue panels clearly
+                    strokeColor: '#059669',
+                    strokeWeight: 2.5,
+                    editable: currentStep === 2, // only edit in step 2
+                    draggable: currentStep === 2,  // only drag in step 2
+                    clickable: currentStep === 2  // only clickable when drawing/editing! In Step 3/4, clicks pass through to place obstructions!
+                  }}
+                />
+              )}
+
+              {/* Draw completed polygon obstructions in Red */}
+              {obstructions
+                .filter(obs => obs.type === 'polygon' && obs.path && obs.path.length >= 3)
+                .map(obs => (
+                  <Polygon
+                    key={obs.id}
+                    path={obs.path}
+                    options={{
+                      fillColor: '#ef4444',
+                      fillOpacity: 0.22,
+                      strokeColor: '#dc2626',
+                      strokeWeight: 2,
+                      clickable: true
+                    }}
+                    onClick={() => setActiveObsId(obs.id)}
+                  />
+                ))}
+
+              {/* Draw active temporary drawing path for polygon obstruction */}
+              {isDrawingObs && activeObsPath.length > 0 && (
+                <>
+                  {/* Connecting lines - always visible even with just 1 or 2 points */}
+                  <Polyline
+                    path={activeObsPath}
+                    options={{
+                      strokeColor: '#dc2626',
+                      strokeWeight: 2,
+                      strokeOpacity: 0.8,
+                      clickable: false
+                    }}
+                  />
+                  
+                  {/* Solid fill polygon outline - only rendered for closed shapes of 3+ points */}
+                  {activeObsPath.length >= 3 && (
+                    <Polygon
+                      path={activeObsPath}
+                      options={{
+                        fillColor: '#ef4444',
+                        fillOpacity: 0.15,
+                        strokeColor: '#dc2626',
+                        strokeWeight: 0,
+                        clickable: false
+                      }}
+                    />
+                  )}
+
+                  {/* Vertex handles/dots at clicked coordinates */}
+                  {activeObsPath.map((pt, idx) => (
+                    <Circle
+                      key={`act_obs_dot_${idx}`}
+                      center={pt}
+                      radius={0.35} // 35cm radius helper dot
+                      options={{
+                        fillColor: '#ffffff',
+                        fillOpacity: 1,
+                        strokeColor: '#dc2626',
+                        strokeWeight: 1.8,
+                        clickable: false
+                      }}
+                    />
+                  ))}
+                </>
+              )}
+
+              {/* Draw circular cylinder obstruction markers */}
+              <ObstructionMarker
+                obstructions={obstructions}
+                onObstructionUpdate={handleObstructionUpdate}
+                onObstructionDelete={handleObstructionDelete}
+                activeId={activeObsId}
+                setActiveId={setActiveObsId}
+              />
+
+              {/* Draw panels fitting overlay - only in step 4 */}
+              {currentStep === 4 && (
+                <PanelOverlay panels={fittedPanels} />
+              )}
+            </GoogleMap>
+          )
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ShadowAnalysisContainer;

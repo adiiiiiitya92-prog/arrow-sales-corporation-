@@ -1,0 +1,51 @@
+﻿[P 1] : Undertaking/Self- Declaration for Domestic Content Requirement fulfillment
+[P 2] : (On a plain Paper)
+[P 3] : 
+[P 4] : This is to certify that M/S …….. [Company Name] has
+[P 5] : Installed……………KW [Capacity] Grid Connected Rooftop Solar Plant
+[P 6] : for……[Consumer Name]at
+[P 7] : ………………………………………………………[Address] under application number ……………………...date……………………[date of application] under
+[P 8] : …………………………………………[DISCOM Name].
+[P 9] : It is hereby undertaken that the PV modules installed for the above-mentioned project are domestically manufactured using domestic manufactured solar cells.The details of installed PV Modules are follows:
+[P 10] : PV Module Capacity:
+[P 11] : Number of PV Modules:
+[P 12] : Sr No of PV Module
+[P 13] : 
+[P 14] : 
+[P 15] : 
+[P 16] : PV Module Make:
+[P 17] : Cell manufacturer’s name:
+[P 18] : Cell GST invoice No:
+[P 19] : The above undertaking is based on the certificate issued by PV Module manufacturer/supplier while supplying the above mentioned order.
+[P 20] : I,………………………………..on behalf of M/S… ………………………………... [Company
+[P 21] : Name] further declare that the information given above is true and correct and nothing has been concealed therein. If anything is found incorrect at any stage, then REC/ MNRE may take any appropriate action against my company for wrong declaration.Supporting documents and proof of the above information will be provided as and when requested by MNRE.
+[P 22] : 
+[P 23] : (Signature With official Seal) For M/S…………….…………………………….. Name:………..……………………………………. Designation:…………..…………………………... Phone:………………………………….………… Email:………….………………………………………………………..
+[P 24] [PAGE BREAK] : Undertaking/Self- Declaration for Domestic Content Requirement fulfillment
+[P 25] : (On a plain Paper)
+[P 26] : 
+[P 27] : This is to certify that M/S …….. [Company Name] has
+[P 28] : Installed……………KW [Capacity] Grid Connected Rooftop Solar Plant
+[P 29] : for……[Consumer Name]at
+[P 30] : ………………………………………………………[Address] under application number ……………………...date……………………[date of application] under
+[P 31] : …………………………………………[DISCOM Name].
+[P 32] : It is hereby undertaken that the PV modules installed for the above-mentioned project are domestically manufactured using domestic manufactured solar cells.The details of installed PV Modules are follows:
+[P 33] : PV Module Capacity:
+[P 34] : Number of PV Modules:
+[P 35] : Sr No of PV Module
+[P 36] : 
+[P 37] : 
+[P 38] : 
+[P 39] : PV Module Make:
+[P 40] : Cell manufacturer’s name:
+[P 41] : Cell GST invoice No:
+[P 42] : The above undertaking is based on the certificate issued by PV Module manufacturer/supplier while supplying the above mentioned order.
+[P 43] : I,………………………………..on behalf of M/S… ………………………………... [Company
+[P 44] : Name] further declare that the information given above is true and correct and nothing has been concealed therein. If anything is found incorrect at any stage, then REC/ MNRE may take any appropriate action against my company for wrong declaration.Supporting documents and proof of the above information will be provided as and when requested by MNRE.
+[P 45] : 
+[P 46] : 
+[P 47] : (Signature With official Seal) For
+[P 48] : M/S…………….……………………………..
+[P 49] : Name:………..……………………………………. Designation:…………..…………………………... Phone:………………………………….………… Email:………….………………………………………………………..
+[P 50] : 
+[P 51] : 
