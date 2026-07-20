@@ -1127,7 +1127,7 @@ export const Leads: React.FC = () => {
                 {/* Uploaded Gallery Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {installPhotos.map((photo) => {
-                    const objectUrl = URL.createObjectURL(photo.photoBlob);
+                    const objectUrl = typeof photo.photoBlob === 'string' ? photo.photoBlob : (photo.photoBlob instanceof Blob ? URL.createObjectURL(photo.photoBlob) : null);
                     return (
                       <div key={photo.id} className="border border-slate-200 rounded-xl p-3 bg-white space-y-3 shadow-xs">
                         <div className="flex justify-between items-start">
@@ -1148,9 +1148,11 @@ export const Leads: React.FC = () => {
                           </button>
                         </div>
 
-                        <a href={objectUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-slate-100 bg-slate-50 aspect-video">
-                          <img src={objectUrl} alt="Inspection tag" className="w-full h-full object-cover hover:scale-105 transition-transform" />
-                        </a>
+                        {objectUrl && (
+                          <a href={objectUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-slate-100 bg-slate-50 aspect-video">
+                            <img src={objectUrl} alt={`${photo.photoType} photo`} className="w-full h-full object-cover hover:scale-105 transition-transform" />
+                          </a>
+                        )}
 
                         <div>
                           <LeafletMap latitude={photo.location.latitude} longitude={photo.location.longitude} placeName={photo.location.placeName} />

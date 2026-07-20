@@ -61,18 +61,40 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
     return dayjs(isoStr).format('DD MMM YYYY, hh:mm A [IST]');
   };
 
-  // Safe helper to convert any Blob, Data URL, or Firebase HTTPS string into a renderable URL
-  const renderBlobImage = (fileOrBlobOrUrl: any): string => {
-    if (!fileOrBlobOrUrl) return '';
-    if (typeof fileOrBlobOrUrl === 'string') return fileOrBlobOrUrl;
+  // Safe helper to convert any Blob, Data URL, ArrayBuffer, or Firebase HTTPS string into a valid renderable URL (or null if empty)
+  const renderBlobImage = (fileOrBlobOrUrl: any): string | null => {
+    if (!fileOrBlobOrUrl) return null;
+    if (typeof fileOrBlobOrUrl === 'string') {
+      const trimmed = fileOrBlobOrUrl.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    }
     if (fileOrBlobOrUrl instanceof Blob || fileOrBlobOrUrl instanceof File) {
       try {
         return URL.createObjectURL(fileOrBlobOrUrl);
       } catch (e) {
-        return '';
+        return null;
       }
     }
-    return '';
+    if (fileOrBlobOrUrl instanceof ArrayBuffer || ArrayBuffer.isView(fileOrBlobOrUrl)) {
+      try {
+        const blob = new Blob([fileOrBlobOrUrl as any], { type: 'image/webp' });
+        return URL.createObjectURL(blob);
+      } catch (e) {
+        return null;
+      }
+    }
+    if (typeof fileOrBlobOrUrl === 'object') {
+      if (fileOrBlobOrUrl.url && typeof fileOrBlobOrUrl.url === 'string') {
+        return fileOrBlobOrUrl.url;
+      }
+      if (fileOrBlobOrUrl.data) {
+        return renderBlobImage(fileOrBlobOrUrl.data);
+      }
+      if (fileOrBlobOrUrl.buffer) {
+        return renderBlobImage(fileOrBlobOrUrl.buffer);
+      }
+    }
+    return null;
   };
 
   // Safe helper to trigger browser download for any document format
@@ -140,6 +162,7 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
                     <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
                       {v.photoBlobs.map((blob, idx) => {
                         const imgUrl = renderBlobImage(blob);
+                        if (!imgUrl) return null;
                         return (
                           <div key={idx} className="relative group">
                             <img
@@ -201,7 +224,7 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
                   type="button"
                   onClick={() => {
                     const url = renderBlobImage(q.pdfBlob);
-                    setPreviewItem({ url, title: `Quotation ${q.quotationNumber}` });
+                    if (url) setPreviewItem({ url, title: `Quotation ${q.quotationNumber}` });
                   }}
                   className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                 >
@@ -244,23 +267,30 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
               <p className="text-xs text-slate-600">Reference No: <span className="font-semibold font-mono">{confirmation.paymentReference}</span></p>
             )}
 
-            {confirmation.clientSignatureBlob && (
-              <div className="mt-3">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Signed Signature:</span>
-                <img
-                  src={renderBlobImage(confirmation.clientSignatureBlob)}
-                  alt="Client Signature preview"
-                  className="h-12 border border-slate-200 rounded p-1 bg-slate-50 cursor-pointer hover:border-slate-400"
-                  onClick={() => setPreviewItem({ url: renderBlobImage(confirmation.clientSignatureBlob), title: `Signature - ${lead.name}` })}
-                />
-              </div>
-            )}
+            {confirmation.clientSignatureBlob && (() => {
+              const sigUrl = renderBlobImage(confirmation.clientSignatureBlob);
+              if (!sigUrl) return null;
+              return (
+                <div className="mt-3">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Signed Signature:</span>
+                  <img
+                    src={sigUrl}
+                    alt="Client Signature preview"
+                    className="h-12 border border-slate-200 rounded p-1 bg-slate-50 cursor-pointer hover:border-slate-400"
+                    onClick={() => setPreviewItem({ url: sigUrl, title: `Signature - ${lead.name}` })}
+                  />
+                </div>
+              );
+            })()}
 
             {confirmation.confirmationPdfBlob && (
               <div className="flex gap-2 mt-3">
                 <button
                   type="button"
-                  onClick={() => setPreviewItem({ url: renderBlobImage(confirmation.confirmationPdfBlob), title: `Order Confirmation Receipt - ${lead.name}` })}
+                  onClick={() => {
+                    const url = renderBlobImage(confirmation.confirmationPdfBlob);
+                    if (url) setPreviewItem({ url, title: `Order Confirmation Receipt - ${lead.name}` });
+                  }}
                   className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -325,7 +355,10 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
               <div className="flex gap-2 mt-3">
                 <button
                   type="button"
-                  onClick={() => setPreviewItem({ url: renderBlobImage(registration.bankDocumentBlob), title: `Bank Document - ${lead.name}` })}
+                  onClick={() => {
+                    const url = renderBlobImage(registration.bankDocumentBlob);
+                    if (url) setPreviewItem({ url, title: `Bank Document - ${lead.name}` });
+                  }}
                   className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -369,14 +402,16 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
                   <div key={doc.id} className="flex justify-between items-center text-xs p-2 bg-slate-50 border border-slate-100 rounded-lg hover:bg-slate-100 transition-colors">
                     <span className="font-semibold text-slate-700 uppercase">{doc.docType.replace('_', ' ')}</span>
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewItem({ url, title: `${doc.docType.toUpperCase().replace('_', ' ')} - ${lead.name}` })}
-                        className="text-slate-600 hover:text-slate-800 font-bold cursor-pointer flex items-center gap-1 bg-white border border-slate-200 px-2 py-0.5 rounded shadow-xs"
-                      >
-                        <Eye className="w-3 h-3 text-slate-500" />
-                        <span>View</span>
-                      </button>
+                      {url && (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewItem({ url, title: `${doc.docType.toUpperCase().replace('_', ' ')} - ${lead.name}` })}
+                          className="text-slate-600 hover:text-slate-800 font-bold cursor-pointer flex items-center gap-1 bg-white border border-slate-200 px-2 py-0.5 rounded shadow-xs"
+                        >
+                          <Eye className="w-3 h-3 text-slate-500" />
+                          <span>View</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleDownloadFile(doc.fileBlob, `${doc.docType}_${lead.name.replace(/\s+/g, '_')}`)}
@@ -410,6 +445,7 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
             <div className="grid grid-cols-2 gap-3 mt-2">
               {photos.map((ph) => {
                 const imgUrl = renderBlobImage(ph.photoBlob);
+                if (!imgUrl) return null;
                 return (
                   <div key={ph.id} className="border border-slate-200 rounded-lg p-2 bg-slate-50 relative group">
                     <span className="absolute top-3 left-3 bg-slate-900/70 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase z-10">
@@ -445,50 +481,55 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
       )}
 
       {/* 8. Release Department Stage */}
-      {release.map((rel) => (
-        <div key={rel.id} className="relative">
-          <div className="absolute -left-[31px] top-1 bg-red-500 text-white rounded-full p-1.5 shadow-sm border border-white">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:shadow-sm transition-shadow">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mb-2">
-              Release Document Received
-            </span>
-            {rel.notes && (
-              <p className="text-xs text-slate-600 mt-1 italic">"{rel.notes}"</p>
-            )}
-
-            <div className="flex gap-2 mt-3">
-              <button
-                type="button"
-                onClick={() => setPreviewItem({ url: renderBlobImage(rel.fileBlob), title: `Release Document - ${lead.name}` })}
-                className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>View Release Doc</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDownloadFile(rel.fileBlob, `Release_Doc_${lead.name.replace(/\s+/g, '_')}`)}
-                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download Document</span>
-              </button>
+      {release.map((rel) => {
+        const docUrl = renderBlobImage(rel.fileBlob);
+        return (
+          <div key={rel.id} className="relative">
+            <div className="absolute -left-[31px] top-1 bg-red-500 text-white rounded-full p-1.5 shadow-sm border border-white">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
             </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:shadow-sm transition-shadow">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mb-2">
+                Release Document Received
+              </span>
+              {rel.notes && (
+                <p className="text-xs text-slate-600 mt-1 italic">"{rel.notes}"</p>
+              )}
 
-            <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
-              <span>Uploaded By: {profiles[rel.uploadedBy] || rel.uploadedBy}</span>
-              <span>{formatDate(rel.uploadedAt)}</span>
+              <div className="flex gap-2 mt-3">
+                {docUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setPreviewItem({ url: docUrl, title: `Release Document - ${lead.name}` })}
+                    className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View Release Doc</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadFile(rel.fileBlob, `Release_Doc_${lead.name.replace(/\s+/g, '_')}`)}
+                  className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Document</span>
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
+                <span>Uploaded By: {profiles[rel.uploadedBy] || rel.uploadedBy}</span>
+                <span>{formatDate(rel.uploadedAt)}</span>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* DOCUMENT & IMAGE FULLSCREEN PREVIEW MODAL OVERLAY */}
-      {previewItem && (
+      {previewItem && previewItem.url && (
         <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-slate-700 animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
