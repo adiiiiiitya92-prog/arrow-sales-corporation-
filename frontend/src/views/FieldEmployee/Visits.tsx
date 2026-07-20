@@ -188,12 +188,32 @@ export const Visits: React.FC = () => {
     return found ? `Client: ${found.name}` : `Client (Deleted)`;
   };
 
-  const renderBlobImage = (blob: Blob) => {
-    try {
-      return URL.createObjectURL(blob);
-    } catch (e) {
-      return '';
+  const renderBlobImage = (fileOrBlobOrUrl: any): string | null => {
+    if (!fileOrBlobOrUrl) return null;
+
+    if (typeof fileOrBlobOrUrl === 'string') {
+      const trimmed = fileOrBlobOrUrl.trim();
+      return trimmed.length > 0 ? trimmed : null;
     }
+
+    if (typeof fileOrBlobOrUrl === 'object') {
+      if (typeof fileOrBlobOrUrl.url === 'string' && fileOrBlobOrUrl.url.trim().length > 0) return fileOrBlobOrUrl.url;
+      if (typeof fileOrBlobOrUrl.dataUrl === 'string' && fileOrBlobOrUrl.dataUrl.trim().length > 0) return fileOrBlobOrUrl.dataUrl;
+      if (typeof fileOrBlobOrUrl.data === 'string' && fileOrBlobOrUrl.data.trim().length > 0) return fileOrBlobOrUrl.data;
+
+      try {
+        if (fileOrBlobOrUrl instanceof Blob || fileOrBlobOrUrl instanceof File) {
+          return URL.createObjectURL(fileOrBlobOrUrl);
+        }
+        if (fileOrBlobOrUrl.type || fileOrBlobOrUrl.size) {
+          const b = new Blob([fileOrBlobOrUrl], { type: fileOrBlobOrUrl.type || 'image/jpeg' });
+          return URL.createObjectURL(b);
+        }
+      } catch (e) {
+        console.warn("Blob URL creation error:", e);
+      }
+    }
+    return null;
   };
 
   return (
@@ -340,17 +360,21 @@ export const Visits: React.FC = () => {
                       <div className="space-y-1.5">
                         <p className="text-[9px] uppercase font-bold text-slate-400">Attached Images ({visit.photoBlobs.length}):</p>
                         <div className="flex flex-wrap gap-2">
-                          {visit.photoBlobs.map((blob, idx) => (
-                            <a
-                              key={idx}
-                              href={renderBlobImage(blob)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="block w-20 h-16 border border-slate-200 rounded-lg overflow-hidden shrink-0 hover:scale-105 transition-transform"
-                            >
-                              <img src={renderBlobImage(blob)} alt="Attached visit inspection" className="w-full h-full object-cover" />
-                            </a>
-                          ))}
+                          {visit.photoBlobs.map((blob, idx) => {
+                            const imgUrl = renderBlobImage(blob);
+                            if (!imgUrl) return null;
+                            return (
+                              <a
+                                key={idx}
+                                href={imgUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block w-20 h-16 border border-slate-200 rounded-lg overflow-hidden shrink-0 hover:scale-105 transition-transform"
+                              >
+                                <img src={imgUrl} alt="Attached visit inspection" className="w-full h-full object-cover" />
+                              </a>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -487,18 +511,22 @@ export const Visits: React.FC = () => {
 
                 {uploadedPhotos.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {uploadedPhotos.map((blob, idx) => (
-                      <div key={idx} className="w-12 h-12 rounded border border-slate-200 overflow-hidden relative shrink-0">
-                        <img src={renderBlobImage(blob)} alt="Inspection file draft" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setUploadedPhotos(prev => prev.filter((_, i) => i !== idx))}
-                          className="absolute inset-0 bg-rose-500/70 opacity-0 hover:opacity-100 flex items-center justify-center text-white font-extrabold text-[9px] cursor-pointer"
-                        >
-                          Del
-                        </button>
-                      </div>
-                    ))}
+                    {uploadedPhotos.map((blob, idx) => {
+                      const imgUrl = renderBlobImage(blob);
+                      if (!imgUrl) return null;
+                      return (
+                        <div key={idx} className="w-12 h-12 rounded border border-slate-200 overflow-hidden relative shrink-0">
+                          <img src={imgUrl} alt="Inspection file draft" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setUploadedPhotos(prev => prev.filter((_, i) => i !== idx))}
+                            className="absolute inset-0 bg-rose-500/70 opacity-0 hover:opacity-100 flex items-center justify-center text-white font-extrabold text-[9px] cursor-pointer"
+                          >
+                            Del
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
