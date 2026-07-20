@@ -11,7 +11,6 @@ import type { Lead, Quotation, OrderConfirmation, Profile, ClientDocument, Clien
 import { Timeline } from '../../components/Pipeline/Timeline';
 import { SignatureCapture } from '../../components/Signature/SignatureCapture';
 import { LeafletMap } from '../../components/Map/LeafletMap';
-import imageCompression from 'browser-image-compression';
 import { compressImage } from '../../services/imageCompressionService';
 import { uploadImageToFirebase } from '../../services/firebase';
 import { DcrDocument } from './DcrDocument';
@@ -255,10 +254,14 @@ export const Leads: React.FC = () => {
         currentUser?.fullName || 'Sales Agent'
       );
 
-      // Save to DB
+      // Upload PDF Blob to Firebase Storage
+      const pdfStoragePath = `quotations/${selectedLead.id}/${quoteDraft.quotationNumber}.pdf`;
+      const pdfUrl = await uploadImageToFirebase(pdfBlob, pdfStoragePath);
+
+      // Save to DB with Firebase Storage URL
       await quotationService.createQuotation({
         ...quoteDraft,
-        pdfBlob
+        pdfBlob: pdfUrl as any
       });
 
       // Update lead rating
@@ -379,17 +382,25 @@ export const Leads: React.FC = () => {
         createdBy: currentUser?.id || 'mock_emp'
       };
 
+      let sigUrl = signatureUrl || '';
+      if (signatureBlob) {
+        sigUrl = await uploadImageToFirebase(signatureBlob, `signatures/${selectedLead.id}_${Date.now()}.png`);
+      }
+
       // Compile receipt PDF
       const pdf = await pdfService.generateConfirmationPDF(
         ocDraft as any,
         selectedLead,
         currentUser?.fullName || 'Booking Manager',
-        signatureUrl || ''
+        sigUrl
       );
+
+      const pdfUrl = await uploadImageToFirebase(pdf, `orders/${selectedLead.id}/receipt_${Date.now()}.pdf`);
 
       await orderService.createOrderConfirmation({
         ...ocDraft,
-        confirmationPdfBlob: pdf
+        clientSignatureBlob: sigUrl as any,
+        confirmationPdfBlob: pdfUrl as any
       });
 
       alert('Order booking confirmed! Booking receipt generated and saved.');
@@ -410,23 +421,27 @@ export const Leads: React.FC = () => {
     if (!selectedLead) return;
 
     try {
-      let processedBlob: Blob = file;
+      let fileUrl = '';
       if (file.type.startsWith('image/')) {
-        processedBlob = await compressImage(file, { isDocument: true, maxSizeKB: 75 });
+        const compressedBlob = await compressImage(file, { isDocument: true, maxSizeKB: 75 });
         const storagePath = `documents/${selectedLead.id}/${docType}_${Date.now()}.webp`;
-        await uploadImageToFirebase(processedBlob, storagePath);
+        fileUrl = await uploadImageToFirebase(compressedBlob, storagePath);
+      } else {
+        const storagePath = `documents/${selectedLead.id}/${docType}_${Date.now()}.pdf`;
+        fileUrl = await uploadImageToFirebase(file, storagePath);
       }
 
       await orderService.uploadClientDocument({
         leadId: selectedLead.id,
         docType,
-        fileBlob: processedBlob,
+        fileBlob: fileUrl as any,
         uploadedBy: currentUser?.id || 'mock_admin'
       });
 
-      alert(`${docType.toUpperCase().replace('_', ' ')} successfully uploaded.`);
+      alert(`${docType.toUpperCase().replace('_', ' ')} successfully uploaded to Firebase Storage.`);
       handleSelectLead(selectedLead);
     } catch (err) {
+      console.error("Doc upload error:", err);
       alert('File upload error.');
     }
   };
@@ -458,23 +473,27 @@ export const Leads: React.FC = () => {
     if (!selectedLead || !regChecklist) return;
 
     try {
-      let processedBlob: Blob = file;
+      let fileUrl = '';
       if (file.type.startsWith('image/')) {
-        processedBlob = await compressImage(file, { isDocument: true, maxSizeKB: 75 });
+        const compressedBlob = await compressImage(file, { isDocument: true, maxSizeKB: 75 });
         const storagePath = `documents/${selectedLead.id}/bank_${Date.now()}.webp`;
-        await uploadImageToFirebase(processedBlob, storagePath);
+        fileUrl = await uploadImageToFirebase(compressedBlob, storagePath);
+      } else {
+        const storagePath = `documents/${selectedLead.id}/bank_${Date.now()}.pdf`;
+        fileUrl = await uploadImageToFirebase(file, storagePath);
       }
 
       const updated = {
         ...regChecklist,
-        bankDocumentBlob: processedBlob,
+        bankDocumentBlob: fileUrl as any,
         bankFileUploaded: true
       };
 
       await orderService.saveClientRegistration(updated);
-      alert('Bank document uploaded.');
+      alert('Bank document uploaded to Firebase Storage.');
       handleSelectLead(selectedLead);
     } catch (err) {
+      console.error("Bank upload error:", err);
       alert('Error uploading bank document.');
     }
   };
@@ -487,16 +506,13 @@ export const Leads: React.FC = () => {
     setIsCapturingInstall(true);
 
     try {
-      // 1. Get GPS Geolocation
       setIsLocatingInstall(true);
       const coords = await mapService.getCurrentCoordinates();
       const address = await mapService.reverseGeocode(coords.latitude, coords.longitude);
       setIsLocatingInstall(false);
 
-      // 2. Compress image file client-side (target < 55 KB)
       const compressed = await compressImage(file, { maxSizeKB: 55 });
 
-      // 3. Stamp GPS coordinate metadata using HTML Canvas overlay watermarking
       const img = new Image();
       img.src = URL.createObjectURL(compressed);
       img.onload = async () => {
@@ -520,12 +536,12 @@ export const Leads: React.FC = () => {
             if (blob) {
               const compBlob = await compressImage(blob, { maxSizeKB: 55 });
               const storagePath = `installations/${selectedLead.id}/${installPhotoType}_${Date.now()}.webp`;
-              await uploadImageToFirebase(compBlob, storagePath);
+              const firebaseUrl = await uploadImageToFirebase(compBlob, storagePath);
 
               await orderService.uploadInstallationPhoto({
                 leadId: selectedLead.id,
                 photoType: installPhotoType,
-                photoBlob: compBlob,
+                photoBlob: firebaseUrl as any,
                 location: {
                   latitude: coords.latitude,
                   longitude: coords.longitude,
@@ -543,7 +559,7 @@ export const Leads: React.FC = () => {
       };
     } catch (err) {
       console.error(err);
-      alert('Location acquisition or camera capture error. Ensure device location permissions are active.');
+      alert('Error capturing installation photo.');
     } finally {
       setIsCapturingInstall(false);
       setIsLocatingInstall(false);
@@ -555,26 +571,31 @@ export const Leads: React.FC = () => {
     if (!selectedLead) return;
 
     try {
-      let processed: Blob = file;
+      let fileUrl = '';
       if (file.type.startsWith('image/')) {
-        const options = { maxSizeMB: 0.8, maxWidthOrHeight: 1200, useWebWorker: true };
-        processed = await imageCompression(file, options);
+        const compressedBlob = await compressImage(file, { isDocument: true, maxSizeKB: 75 });
+        const storagePath = `release/${selectedLead.id}/release_${Date.now()}.webp`;
+        fileUrl = await uploadImageToFirebase(compressedBlob, storagePath);
+      } else {
+        const storagePath = `release/${selectedLead.id}/release_${Date.now()}.pdf`;
+        fileUrl = await uploadImageToFirebase(file, storagePath);
       }
 
       await orderService.uploadReleaseDocument({
         leadId: selectedLead.id,
-        fileBlob: processed,
+        fileBlob: fileUrl as any,
         uploadedBy: currentUser?.id || 'mock_admin',
         notes: releaseNotes || undefined
       });
 
-      alert('Release Document successfully received. Pipeline closed.');
+      alert('Release Document successfully uploaded to Firebase Storage. Pipeline closed.');
       setReleaseNotes('');
       
       const updated = await leadService.getLeadById(selectedLead.id);
       if (updated) setSelectedLead(updated);
       handleSelectLead(updated || selectedLead);
     } catch (err) {
+      console.error(err);
       alert('Error uploading release document.');
     }
   };

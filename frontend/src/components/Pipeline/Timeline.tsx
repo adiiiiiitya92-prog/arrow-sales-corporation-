@@ -6,7 +6,7 @@ import { visitService } from '../../services/visitService';
 import { employeeService } from '../../services/employeeService';
 import dayjs from 'dayjs';
 import { LeafletMap } from '../Map/LeafletMap';
-import { Eye, Download, X, FileText } from 'lucide-react';
+import { Eye, Download, X } from 'lucide-react';
 
 interface TimelineProps {
   lead: Lead;
@@ -61,40 +61,25 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
     return dayjs(isoStr).format('DD MMM YYYY, hh:mm A [IST]');
   };
 
-  // Safe helper to convert any Blob, Data URL, Object, or Firebase HTTPS string into a valid renderable URL
-  const renderBlobImage = (fileOrBlobOrUrl: any): string | null => {
-    if (!fileOrBlobOrUrl) return null;
-
-    if (typeof fileOrBlobOrUrl === 'string') {
-      const trimmed = fileOrBlobOrUrl.trim();
-      return trimmed.length > 0 ? trimmed : null;
-    }
-
-    if (typeof fileOrBlobOrUrl === 'object') {
-      if (typeof fileOrBlobOrUrl.url === 'string' && fileOrBlobOrUrl.url.trim().length > 0) return fileOrBlobOrUrl.url;
-      if (typeof fileOrBlobOrUrl.dataUrl === 'string' && fileOrBlobOrUrl.dataUrl.trim().length > 0) return fileOrBlobOrUrl.dataUrl;
-      if (typeof fileOrBlobOrUrl.data === 'string' && fileOrBlobOrUrl.data.trim().length > 0) return fileOrBlobOrUrl.data;
-
+  // Safe helper to convert any Blob, Data URL, or Firebase HTTPS string into a renderable URL
+  const renderBlobImage = (fileOrBlobOrUrl: any): string => {
+    if (!fileOrBlobOrUrl) return '';
+    if (typeof fileOrBlobOrUrl === 'string') return fileOrBlobOrUrl;
+    if (fileOrBlobOrUrl instanceof Blob || fileOrBlobOrUrl instanceof File) {
       try {
-        if (fileOrBlobOrUrl instanceof Blob || fileOrBlobOrUrl instanceof File) {
-          return URL.createObjectURL(fileOrBlobOrUrl);
-        }
-        if (fileOrBlobOrUrl.type || fileOrBlobOrUrl.size) {
-          const b = new Blob([fileOrBlobOrUrl], { type: fileOrBlobOrUrl.type || 'image/jpeg' });
-          return URL.createObjectURL(b);
-        }
+        return URL.createObjectURL(fileOrBlobOrUrl);
       } catch (e) {
-        console.warn("Blob URL creation error:", e);
+        return '';
       }
     }
-    return null;
+    return '';
   };
 
   // Safe helper to trigger browser download for any document format
   const handleDownloadFile = (fileOrBlobOrUrl: any, defaultFileName: string) => {
     const url = renderBlobImage(fileOrBlobOrUrl);
     if (!url) {
-      alert('Unable to generate download URL for this document.');
+      alert('Unable to generate URL for this document.');
       return;
     }
     const a = document.createElement('a');
@@ -155,14 +140,6 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
                     <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
                       {v.photoBlobs.map((blob, idx) => {
                         const imgUrl = renderBlobImage(blob);
-                        if (!imgUrl) {
-                          return (
-                            <div key={idx} className="h-14 w-14 rounded-lg bg-slate-200 border border-slate-300 flex flex-col items-center justify-center text-[10px] font-bold text-slate-500">
-                              <FileText className="w-4 h-4 text-slate-400" />
-                              <span>Photo</span>
-                            </div>
-                          );
-                        }
                         return (
                           <div key={idx} className="relative group">
                             <img
@@ -174,7 +151,7 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
                             <button
                               type="button"
                               onClick={() => setPreviewItem({ url: imgUrl, title: `Site Visit Photo (${v.personMetName})` })}
-                              className="absolute bottom-1 right-1 bg-slate-900/80 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                              className="absolute bottom-1 right-1 bg-slate-900/80 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                               <Eye className="w-2.5 h-2.5" />
                             </button>
@@ -191,63 +168,63 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
       )}
 
       {/* 3. Quotations Sent */}
-      {quotations.map((q) => {
-        const pdfUrl = renderBlobImage(q.pdfBlob);
-        return (
-          <div key={q.id} className="relative">
-            <div className="absolute -left-[31px] top-1 bg-blue-500 text-white rounded-full p-1.5 shadow-sm border border-white">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:shadow-sm transition-shadow">
-              <div className="flex justify-between items-start">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mb-2">
-                  Quotation Generated: {q.quotationNumber}
+      {quotations.map((q) => (
+        <div key={q.id} className="relative">
+          <div className="absolute -left-[31px] top-1 bg-blue-500 text-white rounded-full p-1.5 shadow-sm border border-white">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:shadow-sm transition-shadow">
+            <div className="flex justify-between items-start">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mb-2">
+                Quotation Generated: {q.quotationNumber}
+              </span>
+              {q.sentViaWhatsapp && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                  ✓ Sent on WhatsApp
                 </span>
-                {q.sentViaWhatsapp && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                    ✓ Sent on WhatsApp
-                  </span>
-                )}
-              </div>
-              <h4 className="text-sm font-bold text-slate-800">Total: ₹{q.grandTotal.toLocaleString('en-IN')}</h4>
-              <div className="mt-2 text-xs space-y-1 text-slate-600">
-                {q.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between">
-                    <span>{item.itemName} (x{item.qty})</span>
-                    <span>₹{item.amount.toLocaleString('en-IN')}</span>
-                  </div>
-                ))}
-              </div>
-              {pdfUrl && (
-                <div className="flex gap-2 mt-3">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewItem({ url: pdfUrl, title: `Quotation ${q.quotationNumber}` })}
-                    className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Preview</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadFile(q.pdfBlob, `${q.quotationNumber}_${lead.name.replace(/\s+/g, '_')}.pdf`)}
-                    className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download PDF</span>
-                  </button>
-                </div>
               )}
-              <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
-                <span>Created By: {profiles[q.createdBy] || q.createdBy}</span>
-                <span>{formatDate(q.createdAt)}</span>
+            </div>
+            <h4 className="text-sm font-bold text-slate-800">Total: ₹{q.grandTotal.toLocaleString('en-IN')}</h4>
+            <div className="mt-2 text-xs space-y-1 text-slate-600">
+              {q.items.map((item, idx) => (
+                <div key={idx} className="flex justify-between">
+                  <span>{item.itemName} (x{item.qty})</span>
+                  <span>₹{item.amount.toLocaleString('en-IN')}</span>
+                </div>
+              ))}
+            </div>
+            {q.pdfBlob && (
+              <div className="flex gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = renderBlobImage(q.pdfBlob);
+                    setPreviewItem({ url, title: `Quotation ${q.quotationNumber}` });
+                  }}
+                  className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Preview</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadFile(q.pdfBlob, `${q.quotationNumber}_${lead.name.replace(/\s+/g, '_')}.pdf`)}
+                  className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download PDF</span>
+                </button>
               </div>
+            )}
+            <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
+              <span>Created By: {profiles[q.createdBy] || q.createdBy}</span>
+              <span>{formatDate(q.createdAt)}</span>
             </div>
           </div>
-        );
-      })}
+        </div>
+      ))}
 
       {/* 4. Booking Order Confirmation */}
       {confirmation && (
@@ -267,46 +244,38 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
               <p className="text-xs text-slate-600">Reference No: <span className="font-semibold font-mono">{confirmation.paymentReference}</span></p>
             )}
 
-            {confirmation.clientSignatureBlob && (() => {
-              const sigUrl = renderBlobImage(confirmation.clientSignatureBlob);
-              if (!sigUrl) return null;
-              return (
-                <div className="mt-3">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Signed Signature:</span>
-                  <img
-                    src={sigUrl}
-                    alt="Client Signature preview"
-                    className="h-12 border border-slate-200 rounded p-1 bg-slate-50 cursor-pointer hover:border-slate-400"
-                    onClick={() => setPreviewItem({ url: sigUrl, title: `Signature - ${lead.name}` })}
-                  />
-                </div>
-              );
-            })()}
+            {confirmation.clientSignatureBlob && (
+              <div className="mt-3">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Signed Signature:</span>
+                <img
+                  src={renderBlobImage(confirmation.clientSignatureBlob)}
+                  alt="Client Signature preview"
+                  className="h-12 border border-slate-200 rounded p-1 bg-slate-50 cursor-pointer hover:border-slate-400"
+                  onClick={() => setPreviewItem({ url: renderBlobImage(confirmation.clientSignatureBlob), title: `Signature - ${lead.name}` })}
+                />
+              </div>
+            )}
 
-            {confirmation.confirmationPdfBlob && (() => {
-              const receiptUrl = renderBlobImage(confirmation.confirmationPdfBlob);
-              if (!receiptUrl) return null;
-              return (
-                <div className="flex gap-2 mt-3">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewItem({ url: receiptUrl, title: `Order Confirmation Receipt - ${lead.name}` })}
-                    className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Preview Receipt</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadFile(confirmation.confirmationPdfBlob, `Order_Confirmation_${lead.name.replace(/\s+/g, '_')}.pdf`)}
-                    className="text-xs bg-violet-50 hover:bg-violet-100 text-violet-700 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download Receipt</span>
-                  </button>
-                </div>
-              );
-            })()}
+            {confirmation.confirmationPdfBlob && (
+              <div className="flex gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => setPreviewItem({ url: renderBlobImage(confirmation.confirmationPdfBlob), title: `Order Confirmation Receipt - ${lead.name}` })}
+                  className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Preview Receipt</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadFile(confirmation.confirmationPdfBlob, `Order_Confirmation_${lead.name.replace(/\s+/g, '_')}.pdf`)}
+                  className="text-xs bg-violet-50 hover:bg-violet-100 text-violet-700 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Receipt</span>
+                </button>
+              </div>
+            )}
 
             <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
               <span>Confirmed By: {profiles[confirmation.createdBy] || confirmation.createdBy}</span>
@@ -352,30 +321,26 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
               </div>
             </div>
 
-            {registration.bankDocumentBlob && (() => {
-              const bankUrl = renderBlobImage(registration.bankDocumentBlob);
-              if (!bankUrl) return null;
-              return (
-                <div className="flex gap-2 mt-3">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewItem({ url: bankUrl, title: `Bank Document - ${lead.name}` })}
-                    className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>View Document</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadFile(registration.bankDocumentBlob, `Bank_Document_${lead.name.replace(/\s+/g, '_')}`)}
-                    className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download Bank File</span>
-                  </button>
-                </div>
-              );
-            })()}
+            {registration.bankDocumentBlob && (
+              <div className="flex gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => setPreviewItem({ url: renderBlobImage(registration.bankDocumentBlob), title: `Bank Document - ${lead.name}` })}
+                  className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>View Document</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadFile(registration.bankDocumentBlob, `Bank_Document_${lead.name.replace(/\s+/g, '_')}`)}
+                  className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Bank File</span>
+                </button>
+              </div>
+            )}
 
             <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
               <span>Updated At:</span>
@@ -404,16 +369,14 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
                   <div key={doc.id} className="flex justify-between items-center text-xs p-2 bg-slate-50 border border-slate-100 rounded-lg hover:bg-slate-100 transition-colors">
                     <span className="font-semibold text-slate-700 uppercase">{doc.docType.replace('_', ' ')}</span>
                     <div className="flex items-center gap-2">
-                      {url && (
-                        <button
-                          type="button"
-                          onClick={() => setPreviewItem({ url, title: `${doc.docType.toUpperCase().replace('_', ' ')} - ${lead.name}` })}
-                          className="text-slate-600 hover:text-slate-800 font-bold cursor-pointer flex items-center gap-1 bg-white border border-slate-200 px-2 py-0.5 rounded shadow-xs"
-                        >
-                          <Eye className="w-3 h-3 text-slate-500" />
-                          <span>View</span>
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setPreviewItem({ url, title: `${doc.docType.toUpperCase().replace('_', ' ')} - ${lead.name}` })}
+                        className="text-slate-600 hover:text-slate-800 font-bold cursor-pointer flex items-center gap-1 bg-white border border-slate-200 px-2 py-0.5 rounded shadow-xs"
+                      >
+                        <Eye className="w-3 h-3 text-slate-500" />
+                        <span>View</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleDownloadFile(doc.fileBlob, `${doc.docType}_${lead.name.replace(/\s+/g, '_')}`)}
@@ -452,28 +415,20 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
                     <span className="absolute top-3 left-3 bg-slate-900/70 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase z-10">
                       {ph.photoType}
                     </span>
-                    <div className="relative overflow-hidden rounded-lg bg-slate-200 aspect-video cursor-pointer" onClick={() => imgUrl && setPreviewItem({ url: imgUrl, title: `Installation Photo - ${ph.photoType.toUpperCase()}` })}>
-                      {imgUrl ? (
-                        <img
-                          src={imgUrl}
-                          alt={`${ph.photoType} photo`}
-                          className="w-full h-full object-cover hover:scale-110 transition-transform"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400 font-bold text-xs">
-                          No Image Preview
-                        </div>
-                      )}
-                      {imgUrl && (
-                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white">
-                          <button type="button" onClick={() => setPreviewItem({ url: imgUrl, title: `Installation Photo - ${ph.photoType.toUpperCase()}` })} className="p-1.5 bg-slate-800/80 rounded-full hover:bg-slate-700 cursor-pointer">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button type="button" onClick={() => handleDownloadFile(ph.photoBlob, `Installation_${ph.photoType}_${lead.name.replace(/\s+/g, '_')}`)} className="p-1.5 bg-slate-800/80 rounded-full hover:bg-slate-700 cursor-pointer">
-                            <Download className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
+                    <div className="relative overflow-hidden rounded-lg bg-slate-200 aspect-video cursor-pointer" onClick={() => setPreviewItem({ url: imgUrl, title: `Installation Photo - ${ph.photoType.toUpperCase()}` })}>
+                      <img
+                        src={imgUrl}
+                        alt={`${ph.photoType} photo`}
+                        className="w-full h-full object-cover hover:scale-110 transition-transform"
+                      />
+                      <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white">
+                        <button type="button" onClick={() => setPreviewItem({ url: imgUrl, title: `Installation Photo - ${ph.photoType.toUpperCase()}` })} className="p-1.5 bg-slate-800/80 rounded-full hover:bg-slate-700">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button type="button" onClick={() => handleDownloadFile(ph.photoBlob, `Installation_${ph.photoType}_${lead.name.replace(/\s+/g, '_')}`)} className="p-1.5 bg-slate-800/80 rounded-full hover:bg-slate-700">
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                     <div className="mt-2">
                       <LeafletMap latitude={ph.location.latitude} longitude={ph.location.longitude} placeName={ph.location.placeName} />
@@ -490,55 +445,50 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
       )}
 
       {/* 8. Release Department Stage */}
-      {release.map((rel) => {
-        const relUrl = renderBlobImage(rel.fileBlob);
-        return (
-          <div key={rel.id} className="relative">
-            <div className="absolute -left-[31px] top-1 bg-red-500 text-white rounded-full p-1.5 shadow-sm border border-white">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+      {release.map((rel) => (
+        <div key={rel.id} className="relative">
+          <div className="absolute -left-[31px] top-1 bg-red-500 text-white rounded-full p-1.5 shadow-sm border border-white">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:shadow-sm transition-shadow">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mb-2">
+              Release Document Received
+            </span>
+            {rel.notes && (
+              <p className="text-xs text-slate-600 mt-1 italic">"{rel.notes}"</p>
+            )}
+
+            <div className="flex gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => setPreviewItem({ url: renderBlobImage(rel.fileBlob), title: `Release Document - ${lead.name}` })}
+                className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>View Release Doc</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDownloadFile(rel.fileBlob, `Release_Doc_${lead.name.replace(/\s+/g, '_')}`)}
+                className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Document</span>
+              </button>
             </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:shadow-sm transition-shadow">
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mb-2">
-                Release Document Received
-              </span>
-              {rel.notes && (
-                <p className="text-xs text-slate-600 mt-1 italic">"{rel.notes}"</p>
-              )}
 
-              <div className="flex gap-2 mt-3">
-                {relUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setPreviewItem({ url: relUrl, title: `Release Document - ${lead.name}` })}
-                    className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>View Release Doc</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleDownloadFile(rel.fileBlob, `Release_Doc_${lead.name.replace(/\s+/g, '_')}`)}
-                  className="text-xs bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Document</span>
-                </button>
-              </div>
-
-              <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
-                <span>Uploaded By: {profiles[rel.uploadedBy] || rel.uploadedBy}</span>
-                <span>{formatDate(rel.uploadedAt)}</span>
-              </div>
+            <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
+              <span>Uploaded By: {profiles[rel.uploadedBy] || rel.uploadedBy}</span>
+              <span>{formatDate(rel.uploadedAt)}</span>
             </div>
           </div>
-        );
-      })}
+        </div>
+      ))}
 
       {/* DOCUMENT & IMAGE FULLSCREEN PREVIEW MODAL OVERLAY */}
-      {previewItem && previewItem.url && (
+      {previewItem && (
         <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-slate-700 animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
