@@ -342,6 +342,157 @@ export const ShadowAnalysisContainer: React.FC = () => {
       layoutSVG += `</svg>`;
     }
 
+    // Generate 3D Building Snapshots from 3 distinct angles
+    const render3DSnapshot = (yawDeg: number, pitchDeg: number): string => {
+      if (!polygonPath || polygonPath.length < 3 || !window.google) return '';
+
+      const imgWidth = 550;
+      const imgHeight = 360;
+      const canvas = document.createElement('canvas');
+      canvas.width = imgWidth;
+      canvas.height = imgHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return '';
+
+      const origin = polygonPath[0];
+      const googleMaps = window.google.maps;
+
+      const localPoly = polygonPath.map(pt => latLngToMeters(pt, origin, googleMaps));
+
+      let minX = Infinity, maxX = -Infinity;
+      let minY = Infinity, maxY = -Infinity;
+      localPoly.forEach(p => {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      });
+
+      const dx = maxX - minX;
+      const dy = maxY - minY;
+      const centerLocal = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+      const bHeight = 7.5;
+
+      const maxBound = Math.max(dx, dy, bHeight * 1.5, 12);
+      const scale = (Math.min(imgWidth, imgHeight) * 0.5) / maxBound;
+
+      const proj3D = (pt: { x: number; y: number; z: number }) => {
+        const radYaw = (yawDeg * Math.PI) / 180;
+        const radPitch = (pitchDeg * Math.PI) / 180;
+
+        const xRot = pt.x * Math.cos(radYaw) - pt.y * Math.sin(radYaw);
+        const yRot = pt.x * Math.sin(radYaw) + pt.y * Math.cos(radYaw);
+        const yProj = yRot * Math.cos(radPitch);
+        const zProj = pt.z * Math.sin(radPitch);
+
+        return {
+          x: imgWidth / 2 + xRot * scale,
+          y: imgHeight * 0.58 - yProj * scale - zProj * scale
+        };
+      };
+
+      // Background Slate Sky
+      const bgGrad = ctx.createRadialGradient(imgWidth/2, imgHeight/2, 20, imgWidth/2, imgHeight/2, imgWidth*0.7);
+      bgGrad.addColorStop(0, '#1e293b');
+      bgGrad.addColorStop(1, '#0f172a');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, imgWidth, imgHeight);
+
+      // 3D Building Walls
+      const roofBase3D = localPoly.map(p => ({ x: p.x - centerLocal.x, y: p.y - centerLocal.y, z: 0 }));
+      const roofTop3D = localPoly.map(p => ({ x: p.x - centerLocal.x, y: p.y - centerLocal.y, z: bHeight }));
+
+      const groundPoints = roofBase3D.map(proj3D);
+      const roofPoints = roofTop3D.map(proj3D);
+
+      if (roofPoints.length >= 3) {
+        const numVertices = roofTop3D.length;
+        for (let i = 0; i < numVertices; i++) {
+          const nextIdx = (i + 1) % numVertices;
+          const g1 = groundPoints[i];
+          const g2 = groundPoints[nextIdx];
+          const r1 = roofPoints[i];
+          const r2 = roofPoints[nextIdx];
+
+          const wallAngle = Math.atan2(roofTop3D[nextIdx].y - roofTop3D[i].y, roofTop3D[nextIdx].x - roofTop3D[i].x);
+          const lightIntensity = Math.abs(Math.sin(wallAngle + (yawDeg * Math.PI) / 180));
+          const wallBrightness = Math.round(85 + lightIntensity * 65);
+
+          ctx.fillStyle = `rgb(${wallBrightness}, ${wallBrightness + 12}, ${wallBrightness + 28})`;
+          ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 1.2;
+
+          ctx.beginPath();
+          ctx.moveTo(g1.x, g1.y);
+          ctx.lineTo(g2.x, g2.y);
+          ctx.lineTo(r2.x, r2.y);
+          ctx.lineTo(r1.x, r1.y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // Roof Surface Fill
+        ctx.fillStyle = '#64748b';
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2.0;
+
+        ctx.beginPath();
+        ctx.moveTo(roofPoints[0].x, roofPoints[0].y);
+        for (let i = 1; i < roofPoints.length; i++) {
+          ctx.lineTo(roofPoints[i].x, roofPoints[i].y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // Panels & Racking Legs
+      const tiltRad = (panelSpec.tiltDeg * Math.PI) / 180;
+      const p3D = fittedPanels.map(p => {
+        const bounds3D = p.localBounds.map((pt, idx) => {
+          const tiltElev = (idx >= 2) ? (p.localBounds[2].y - p.localBounds[0].y) * Math.sin(tiltRad) : 0;
+          return { x: pt.x - centerLocal.x, y: pt.y - centerLocal.y, z: bHeight + 0.35 + tiltElev };
+        });
+        return { bounds: bounds3D, isRecommended: p.isRecommended, yCenter: p.localCenter.y - centerLocal.y };
+      });
+
+      p3D.sort((a, b) => b.yCenter - a.yCenter);
+
+      p3D.forEach(panel => {
+        const pts = panel.bounds.map(proj3D);
+        if (pts.length >= 4) {
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 1.0;
+          panel.bounds.forEach(pBound => {
+            const roofPt = proj3D({ x: pBound.x, y: pBound.y, z: bHeight });
+            const pPt = proj3D(pBound);
+            ctx.beginPath();
+            ctx.moveTo(roofPt.x, roofPt.y);
+            ctx.lineTo(pPt.x, pPt.y);
+            ctx.stroke();
+          });
+
+          ctx.fillStyle = panel.isRecommended ? '#1d4ed8' : '#ef4444';
+          ctx.strokeStyle = panel.isRecommended ? '#1e3a8a' : '#b91c1c';
+          ctx.lineWidth = 1.2;
+
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+      });
+
+      return canvas.toDataURL('image/png');
+    };
+
+    const img3DIsometric = render3DSnapshot(-35, 32); // Angle 1: Isometric 3D
+    const img3DSide = render3DSnapshot(45, 20);       // Angle 2: Side Elevation 3D
+    const img3DTop = render3DSnapshot(0, 75);        // Angle 3: Top Rooftop 3D
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       alert("Failed to open print window. Please allow popups for this site.");
@@ -453,6 +604,27 @@ export const ShadowAnalysisContainer: React.FC = () => {
                 </table>
               </div>
             </div>
+
+            <!-- 3D Building Views from Multiple Angles -->
+            ${img3DIsometric ? `
+              <div class="space-y-3 pt-2">
+                <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">3D Building & Racking Perspectives (Multi-Angle)</h3>
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="bg-slate-950 p-2 rounded-2xl border border-slate-800 text-center space-y-1 shadow-xs">
+                    <img src="${img3DIsometric}" class="w-full rounded-xl border border-slate-800" />
+                    <span class="text-[9px] font-black text-slate-300 block">Angle 1: Isometric 3D View</span>
+                  </div>
+                  <div class="bg-slate-950 p-2 rounded-2xl border border-slate-800 text-center space-y-1 shadow-xs">
+                    <img src="${img3DSide}" class="w-full rounded-xl border border-slate-800" />
+                    <span class="text-[9px] font-black text-slate-300 block">Angle 2: Side Elevation View</span>
+                  </div>
+                  <div class="bg-slate-950 p-2 rounded-2xl border border-slate-800 text-center space-y-1 shadow-xs">
+                    <img src="${img3DTop}" class="w-full rounded-xl border border-slate-800" />
+                    <span class="text-[9px] font-black text-slate-300 block">Angle 3: Top Rooftop View</span>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
 
             <!-- Roof Layout Map Vector Diagram -->
             <div class="space-y-3">
