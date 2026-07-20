@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { leadService } from '../../services/leadService';
+import { compressImage } from '../../services/imageCompressorService';
+import { uploadToCloudflareR2 } from '../../services/cloudflareR2Service';
 import type { Lead } from '../../types';
 import {
   FileText,
@@ -851,14 +853,20 @@ export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (evt) => {
-                          setAadharXeroxUrl(evt.target?.result as string);
-                        };
-                        reader.readAsDataURL(file);
+                        try {
+                          const comp = await compressImage(file, { category: 'document' });
+                          setAadharXeroxUrl(comp.dataUrl);
+                          uploadToCloudflareR2(comp.blob, comp.fileName, { path: 'wcr_aadhar' });
+                        } catch (err) {
+                          const reader = new FileReader();
+                          reader.onload = (evt) => {
+                            setAadharXeroxUrl(evt.target?.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
                       }
                     }}
                     className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"

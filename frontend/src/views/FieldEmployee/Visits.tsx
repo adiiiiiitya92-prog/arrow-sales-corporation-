@@ -4,6 +4,8 @@ import { visitService } from '../../services/visitService';
 import { leadService } from '../../services/leadService';
 import { employeeService } from '../../services/employeeService';
 import { mapService } from '../../services/mapService';
+import { compressImage } from '../../services/imageCompressorService';
+import { uploadToCloudflareR2 } from '../../services/cloudflareR2Service';
 import type { Coordinates } from '../../services/mapService';
 import type { FieldVisitReport, Lead, Profile } from '../../types';
 import { LeafletMap } from '../../components/Map/LeafletMap';
@@ -84,11 +86,21 @@ export const Visits: React.FC = () => {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
-      const blobsArray = filesArray.map(file => new Blob([file], { type: file.type }));
-      setUploadedPhotos(prev => [...prev, ...blobsArray]);
+      
+      const compressedResults = await Promise.all(
+        filesArray.map(file => compressImage(file, { category: 'site_photo' }))
+      );
+
+      // Async background upload to Cloudflare R2 Storage (10GB free tier)
+      compressedResults.forEach(res => {
+        uploadToCloudflareR2(res.blob, res.fileName, { path: 'visit_photos' });
+      });
+
+      const compressedBlobs = compressedResults.map(res => res.blob);
+      setUploadedPhotos(prev => [...prev, ...compressedBlobs]);
     }
   };
 

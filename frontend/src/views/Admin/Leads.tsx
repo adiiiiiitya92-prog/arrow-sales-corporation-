@@ -12,6 +12,8 @@ import { Timeline } from '../../components/Pipeline/Timeline';
 import { SignatureCapture } from '../../components/Signature/SignatureCapture';
 import { LeafletMap } from '../../components/Map/LeafletMap';
 import imageCompression from 'browser-image-compression';
+import { compressImage } from '../../services/imageCompressorService';
+import { uploadToCloudflareR2 } from '../../services/cloudflareR2Service';
 import { DcrDocument } from './DcrDocument';
 import { WcrDocument } from './WcrDocument';
 import { ModelAgreementDocument } from './ModelAgreementDocument';
@@ -408,12 +410,17 @@ export const Leads: React.FC = () => {
     if (!selectedLead) return;
 
     try {
-      // Compress KYC files/electricity bills if they are heavy images, otherwise store as PDF
       let processedBlob: Blob = file;
+      let filename = file.name;
+
       if (file.type.startsWith('image/')) {
-        const options = { maxSizeMB: 0.8, maxWidthOrHeight: 1200, useWebWorker: true };
-        processedBlob = await imageCompression(file, options);
+        const comp = await compressImage(file, { category: 'document' });
+        processedBlob = comp.blob;
+        filename = comp.fileName;
       }
+
+      // Background upload to Cloudflare R2 Storage (10GB free tier)
+      uploadToCloudflareR2(processedBlob, filename, { path: `client_documents/${selectedLead.id}` });
 
       await orderService.uploadClientDocument({
         leadId: selectedLead.id,
@@ -422,7 +429,7 @@ export const Leads: React.FC = () => {
         uploadedBy: currentUser?.id || 'mock_admin'
       });
 
-      alert(`${docType.toUpperCase().replace('_', ' ')} successfully uploaded.`);
+      alert(`${docType.toUpperCase().replace('_', ' ')} successfully uploaded & compressed.`);
       handleSelectLead(selectedLead);
     } catch (err) {
       alert('File upload error.');
@@ -457,10 +464,16 @@ export const Leads: React.FC = () => {
 
     try {
       let processedBlob: Blob = file;
+      let filename = file.name;
+
       if (file.type.startsWith('image/')) {
-        const options = { maxSizeMB: 0.8, maxWidthOrHeight: 1200, useWebWorker: true };
-        processedBlob = await imageCompression(file, options);
+        const comp = await compressImage(file, { category: 'document' });
+        processedBlob = comp.blob;
+        filename = comp.fileName;
       }
+
+      // Upload to Cloudflare R2
+      uploadToCloudflareR2(processedBlob, filename, { path: `bank_docs/${selectedLead.id}` });
 
       const updated = {
         ...regChecklist,
@@ -469,7 +482,7 @@ export const Leads: React.FC = () => {
       };
 
       await orderService.saveClientRegistration(updated);
-      alert('Bank document uploaded.');
+      alert('Bank document compressed & uploaded.');
       handleSelectLead(selectedLead);
     } catch (err) {
       alert('Error uploading bank document.');
@@ -490,13 +503,12 @@ export const Leads: React.FC = () => {
       const address = await mapService.reverseGeocode(coords.latitude, coords.longitude);
       setIsLocatingInstall(false);
 
-      // 2. Compress image file client-side (target < 1MB)
-      const options = { maxSizeMB: 0.8, maxWidthOrHeight: 1200, useWebWorker: true };
-      const compressed = await imageCompression(file, options);
+      // 2. Compress image file client-side (WebP ultra compression)
+      const comp = await compressImage(file, { category: 'site_photo' });
 
       // 3. Stamp GPS coordinate metadata using HTML Canvas overlay watermarking
       const img = new Image();
-      img.src = URL.createObjectURL(compressed);
+      img.src = comp.dataUrl;
       img.onload = async () => {
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
@@ -517,9 +529,12 @@ export const Leads: React.FC = () => {
           ctx.fillText(`Address: ${address.substring(0, 75)}...`, 20, img.height - 25);
           ctx.fillText(`Timestamp: ${dayjs().format('DD MMM YYYY, hh:mm A [IST]')}`, 20, img.height - 8);
 
-          // Convert canvas stamp back to Blob
+          // Convert canvas stamp back to compressed WebP Blob
           canvas.toBlob(async (blob) => {
             if (blob) {
+              // Async upload to Cloudflare R2 Storage (10GB free tier)
+              uploadToCloudflareR2(blob, comp.fileName, { path: `installations/${selectedLead.id}` });
+
               await orderService.uploadInstallationPhoto({
                 leadId: selectedLead.id,
                 photoType: installPhotoType,
@@ -533,10 +548,10 @@ export const Leads: React.FC = () => {
                 uploadedBy: currentUser?.id || 'mock_emp'
               });
 
-              alert(`Watermarked Installation photo (${installPhotoType.toUpperCase()}) saved!`);
+              alert(`Watermarked Installation photo (${installPhotoType.toUpperCase()}) compressed & saved!`);
               handleSelectLead(selectedLead);
             }
-          }, 'image/jpeg', 0.95);
+          }, 'image/webp', 0.75);
         }
       };
     } catch (err) {
