@@ -6,13 +6,55 @@ interface RoofPolygonDrawerProps {
   onPolygonChange: (path: google.maps.LatLngLiteral[]) => void;
   onClear: () => void;
   areaSqm: number;
+  projectName?: string;
+  setProjectName?: (val: string) => void;
+  drawMode?: 'work_area' | 'free_area' | 'shadow_cast';
+  setDrawMode?: (val: 'work_area' | 'free_area' | 'shadow_cast') => void;
+  roofShapeType?: 'polygon' | 'circle';
+  setRoofShapeType?: (type: 'polygon' | 'circle') => void;
+  circleRoofRadius?: number;
+  setCircleRoofRadius?: (val: number) => void;
+  analysisDate?: string;
+  setAnalysisDate?: (val: string) => void;
+  timeStart?: number;
+  setTimeStart?: (val: number) => void;
+  timeEnd?: number;
+  setTimeEnd?: (val: number) => void;
+  panelTiltDeg?: number;
+  setPanelTiltDeg?: (val: number) => void;
+  panelAzimuthDeg?: number;
+  setPanelAzimuthDeg?: (val: number) => void;
+  pitchDistance?: number;
+  setPitchDistance?: (val: number) => void;
+  onSuggestPitch?: () => void;
 }
 
 export const RoofPolygonDrawer: React.FC<RoofPolygonDrawerProps> = ({
   polygonPath,
   onPolygonChange,
   onClear,
-  areaSqm
+  areaSqm,
+  projectName = 'Solar Project',
+  setProjectName,
+  drawMode = 'work_area',
+  setDrawMode,
+  roofShapeType = 'polygon',
+  setRoofShapeType,
+  circleRoofRadius = 6.0,
+  setCircleRoofRadius,
+  analysisDate,
+  setAnalysisDate,
+  timeStart = 8,
+  setTimeStart,
+  timeEnd = 17,
+  setTimeEnd,
+  panelTiltDeg = 0,
+  setPanelTiltDeg,
+  panelAzimuthDeg = 180,
+  setPanelAzimuthDeg,
+  pitchDistance = 0,
+  setPitchDistance,
+  onSuggestPitch
 }) => {
   const areaSqft = Math.round(areaSqm * 10.7639);
 
@@ -47,6 +89,218 @@ export const RoofPolygonDrawer: React.FC<RoofPolygonDrawerProps> = ({
               <span>Reset Outline</span>
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Project Name Field */}
+      <div className="space-y-1">
+        <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Project Name</label>
+        <input
+          type="text"
+          value={projectName}
+          onChange={(e) => setProjectName?.(e.target.value)}
+          placeholder="e.g. Roof Top Commercial Solar"
+          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-800 outline-none focus:border-emerald-500"
+        />
+      </div>
+
+      {/* Roof Shape Tool Selector (Polygon vs Circle Tool) */}
+      <div className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Roof Shape Tool</span>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setRoofShapeType?.('polygon')}
+            className={`text-[9px] font-black py-2 px-2.5 rounded-xl transition-all border flex items-center justify-center space-x-1 ${
+              roofShapeType === 'polygon'
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <span>📐 Custom Polygon</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRoofShapeType?.('circle')}
+            className={`text-[9px] font-black py-2 px-2.5 rounded-xl transition-all border flex items-center justify-center space-x-1 ${
+              roofShapeType === 'circle'
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <span>⭕ Circle Roof Tool</span>
+          </button>
+        </div>
+
+        {roofShapeType === 'circle' && (
+          <div className="pt-1 border-t border-slate-200/60 space-y-1.5">
+            <div className="flex justify-between items-center">
+              <label className="text-[9px] text-slate-500 font-semibold">Circle Radius (m)</label>
+              <span className="text-[10px] font-black text-emerald-600">{circleRoofRadius.toFixed(1)}m</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => setCircleRoofRadius?.(Math.max(1.0, circleRoofRadius - 1.0))}
+                className="bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-black text-[9px] px-2 py-1 rounded-lg transition-all cursor-pointer shadow-xs"
+              >
+                - 1m
+              </button>
+              <input
+                type="range"
+                min="1.0"
+                max="35.0"
+                step="0.5"
+                value={circleRoofRadius}
+                onChange={(e) => setCircleRoofRadius?.(parseFloat(e.target.value) || 1.0)}
+                className="flex-1 accent-emerald-500 h-1.5 bg-slate-200 rounded-lg cursor-pointer outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setCircleRoofRadius?.(Math.min(40.0, circleRoofRadius + 1.0))}
+                className="bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-black text-[9px] px-2 py-1 rounded-lg transition-all cursor-pointer shadow-xs"
+              >
+                + 1m
+              </button>
+            </div>
+            <p className="text-[8px] text-slate-400 font-medium italic">
+              Use slider or +/- buttons to expand or shrink circle radius.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Draw Mode Selector (Work Area / Free Area / Shadow Cast) */}
+      <div className="space-y-1.5 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Draw Mode</span>
+        <div className="grid grid-cols-3 gap-1.5">
+          <button
+            type="button"
+            onClick={() => setDrawMode?.('work_area')}
+            className={`text-[9px] font-black py-1.5 px-2 rounded-xl transition-all border ${
+              drawMode === 'work_area'
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Work Area
+          </button>
+          <button
+            type="button"
+            onClick={() => setDrawMode?.('free_area')}
+            className={`text-[9px] font-black py-1.5 px-2 rounded-xl transition-all border ${
+              drawMode === 'free_area'
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Free Area
+          </button>
+          <button
+            type="button"
+            onClick={() => setDrawMode?.('shadow_cast')}
+            className={`text-[9px] font-black py-1.5 px-2 rounded-xl transition-all border ${
+              drawMode === 'shadow_cast'
+                ? 'bg-amber-600 border-amber-600 text-white shadow-xs'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Shadow Cast
+          </button>
+        </div>
+      </div>
+
+      {/* Date & Time Range Controls */}
+      <div className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Shading Simulation Window</span>
+        <div className="space-y-2">
+          <div>
+            <label className="text-[9px] text-slate-500 font-semibold block mb-0.5">Simulation Date</label>
+            <input
+              type="date"
+              value={analysisDate || ''}
+              onChange={(e) => setAnalysisDate?.(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[9px] text-slate-500 font-semibold block mb-0.5">Start Hour</label>
+              <select
+                value={timeStart}
+                onChange={(e) => setTimeStart?.(parseInt(e.target.value))}
+                className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
+              >
+                {[6, 7, 8, 9, 10, 11].map(h => (
+                  <option key={h} value={h}>{h < 10 ? `0${h}` : h}:00 AM</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[9px] text-slate-500 font-semibold block mb-0.5">End Hour</label>
+              <select
+                value={timeEnd}
+                onChange={(e) => setTimeEnd?.(parseInt(e.target.value))}
+                className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
+              >
+                {[14, 15, 16, 17, 18, 19].map(h => (
+                  <option key={h} value={h}>{h > 12 ? h - 12 : h}:00 PM</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tilt, Azimuth & Pitch Distance Controls */}
+      <div className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Panel Tilt & Orientation</span>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[9px] text-slate-500 font-semibold block mb-0.5">Tilt Angle (°)</label>
+            <input
+              type="number"
+              min="0"
+              max="60"
+              value={panelTiltDeg}
+              onChange={(e) => setPanelTiltDeg?.(parseInt(e.target.value) || 0)}
+              className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-[9px] text-slate-500 font-semibold block mb-0.5">Azimuth (°)</label>
+            <input
+              type="number"
+              min="0"
+              max="360"
+              value={panelAzimuthDeg}
+              onChange={(e) => setPanelAzimuthDeg?.(parseInt(e.target.value) || 180)}
+              className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
+            />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex justify-between items-center mb-0.5">
+            <label className="text-[9px] text-slate-500 font-semibold">Pitch Distance (m)</label>
+            {onSuggestPitch && (
+              <button
+                type="button"
+                onClick={onSuggestPitch}
+                className="text-[9px] font-bold text-emerald-600 hover:text-emerald-700 underline cursor-pointer"
+              >
+                Suggestive Pitch
+              </button>
+            )}
+          </div>
+          <input
+            type="number"
+            step="0.05"
+            min="0"
+            value={pitchDistance}
+            onChange={(e) => setPitchDistance?.(parseFloat(e.target.value) || 0)}
+            className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
+          />
         </div>
       </div>
 

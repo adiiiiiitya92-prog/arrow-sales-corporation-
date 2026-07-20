@@ -267,21 +267,47 @@ export const ObstructionMarker: React.FC<ObstructionMarkerProps> = ({
 
                 <div>
                   <label className="text-[8px] font-bold text-slate-400 uppercase tracking-tight block mb-0.5">
-                    Size (m)
+                    Size / Diam (m)
                   </label>
                   {obs.type === 'polygon' ? (
                     <span className="text-[9px] font-bold text-rose-600 block mt-1">
                       {obs.path?.length || 0} pts
                     </span>
                   ) : (
-                    <input
-                      type="number"
-                      min="0.1"
-                      step="0.1"
-                      value={obs.widthMeters}
-                      onChange={(e) => onObstructionUpdate(obs.id, { widthMeters: parseFloat(e.target.value) || 0.1 })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1 text-[10px] font-bold text-slate-700 outline-none text-center"
-                    />
+                    <div className="flex items-center space-x-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const nextW = Math.max(0.2, obs.widthMeters - 0.5);
+                          onObstructionUpdate(obs.id, { widthMeters: parseFloat(nextW.toFixed(1)) });
+                        }}
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-[9px] px-1 py-0.5 rounded border border-slate-300 transition-colors cursor-pointer"
+                        title="Shrink Diameter"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        value={obs.widthMeters}
+                        onChange={(e) => onObstructionUpdate(obs.id, { widthMeters: parseFloat(e.target.value) || 0.1 })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1 text-[10px] font-bold text-slate-700 outline-none text-center"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const nextW = Math.min(20.0, obs.widthMeters + 0.5);
+                          onObstructionUpdate(obs.id, { widthMeters: parseFloat(nextW.toFixed(1)) });
+                        }}
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-[9px] px-1 py-0.5 rounded border border-slate-300 transition-colors cursor-pointer"
+                        title="Expand Diameter"
+                      >
+                        +
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

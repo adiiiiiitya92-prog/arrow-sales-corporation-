@@ -181,11 +181,38 @@ _Generated using Solar CRM Shadow & Panel Layout Fitter._`
           <span>Layout & Sizing Settings</span>
         </h4>
 
-        {/* Panel Dimensions */}
+        {/* Panel Dimensions & Layout Preset */}
         <div className="space-y-2.5">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight block">
-            Panel Specifications
-          </span>
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight block">
+              Panel Specifications & Preset
+            </span>
+            <select
+              value={layoutConfig.layoutType || 'custom'}
+              onChange={(e) => {
+                const val = e.target.value as any;
+                if (val === '2mx1m') {
+                  setPanelSpec({ ...panelSpec, length: 2.0, width: 1.0, wattage: 450 });
+                  setLayoutConfig({ ...layoutConfig, layoutType: val });
+                } else if (val === '2.3mx1.1m') {
+                  setPanelSpec({ ...panelSpec, length: 2.28, width: 1.13, wattage: 550 });
+                  setLayoutConfig({ ...layoutConfig, layoutType: val });
+                } else if (val === '2.1mx1.05m') {
+                  setPanelSpec({ ...panelSpec, length: 2.1, width: 1.05, wattage: 500 });
+                  setLayoutConfig({ ...layoutConfig, layoutType: val });
+                } else {
+                  setLayoutConfig({ ...layoutConfig, layoutType: 'custom' });
+                }
+              }}
+              className="bg-slate-50 border border-slate-200 rounded-md p-1 text-[10px] font-bold text-slate-700 outline-none"
+            >
+              <option value="custom">Custom Panel Preset</option>
+              <option value="2.3mx1.1m">Layout 1 (550W - 2.28m × 1.13m)</option>
+              <option value="2.1mx1.05m">Layout 2 (500W - 2.10m × 1.05m)</option>
+              <option value="2mx1m">Layout 3 (450W - 2.00m × 1.00m)</option>
+            </select>
+          </div>
+
           <div className="grid grid-cols-3 gap-2">
             <div>
               <label className="text-[9px] text-slate-400 font-bold block mb-1">Width (m)</label>
@@ -217,6 +244,50 @@ _Generated using Solar CRM Shadow & Panel Layout Fitter._`
                 min="100"
                 value={panelSpec.wattage}
                 onChange={(e) => handleSpecChange('wattage', parseInt(e.target.value) || 550)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Tilt, Azimuth & Pitch Distance Controls */}
+        <div className="space-y-2.5 border-t border-slate-100 pt-3">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight block">
+            Panel Tilt & Alignment
+          </span>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="text-[9px] text-slate-400 font-bold block mb-1">Tilt (deg)</label>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                max="60"
+                value={panelSpec.tiltDeg || 0}
+                onChange={(e) => handleSpecChange('tiltDeg', parseInt(e.target.value) || 0)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-[9px] text-slate-400 font-bold block mb-1">Azimuth (deg)</label>
+              <input
+                type="number"
+                step="5"
+                min="0"
+                max="360"
+                value={panelSpec.azimuthDeg ?? 180}
+                onChange={(e) => handleSpecChange('azimuthDeg', parseInt(e.target.value) || 180)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-[9px] text-slate-400 font-bold block mb-1">Pitch Dist (m)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={layoutConfig.pitchDistance || 0}
+                onChange={(e) => handleConfigChange('pitchDistance', parseFloat(e.target.value) || 0)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
               />
             </div>

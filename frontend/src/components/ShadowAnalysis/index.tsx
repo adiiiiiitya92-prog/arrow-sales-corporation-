@@ -16,8 +16,9 @@ import type {
   Obstruction,
   FittedPanel
 } from '../../services/panelLayoutService';
-import { calculateShading } from '../../services/shadowAnalysisService';
-import { latLngToMeters } from '../../services/geometryUtils';
+import { calculateShading, calculateShadowPolygonsForVisualization, calculateSuggestedPitchDistance } from '../../services/shadowAnalysisService';
+import type { ShadingConfig } from '../../services/shadowAnalysisService';
+import { latLngToMeters, metersToLatLng } from '../../services/geometryUtils';
 
 // Only request geometry library (drawing & places are deprecated legacy APIs)
 const libraries: "geometry"[] = ['geometry'];
@@ -53,15 +54,31 @@ export const ShadowAnalysisContainer: React.FC = () => {
   const [panelSpec, setPanelSpec] = useState<PanelSpec>({
     width: 1.13,  // default standard E-W size for 550W panel
     length: 2.28, // default standard N-S size for 550W panel
-    wattage: 550  // standard Indian panel wattage
+    wattage: 550, // standard Indian panel wattage
+    tiltDeg: 0,
+    azimuthDeg: 180  // south-facing default
   });
 
   const [layoutConfig, setLayoutConfig] = useState<LayoutConfig>({
     setback: 0.5,       // default standard setback margin
     rowSpacing: 0.02,   // 2cm row boundary spacer
     colSpacing: 0.02,   // 2cm column spacer
-    orientation: 'portrait'
+    orientation: 'portrait',
+    pitchDistance: 0,
+    layoutType: 'custom'
   });
+
+  // Shadow Analysis Configuration
+  const [analysisDate, setAnalysisDate] = useState(new Date().toISOString().split('T')[0]);
+  const [timeStart, setTimeStart] = useState(8);
+  const [timeEnd, setTimeEnd] = useState(17);
+  const [drawMode, setDrawMode] = useState<'work_area' | 'free_area' | 'shadow_cast'>('work_area');
+  const [roofShapeType, setRoofShapeType] = useState<'polygon' | 'circle'>('polygon');
+  const [circleRoofRadius, setCircleRoofRadius] = useState<number>(6.0);
+  const [projectName, setProjectName] = useState('Solar Project');
+  const [showShadowOverlay] = useState(true);
+  const [shadowPreviewHour] = useState(12);
+  const [shadowOverlayPolygons, setShadowOverlayPolygons] = useState<google.maps.LatLngLiteral[][]>([]);
 
   // Calculation Results
   const [fittedPanels, setFittedPanels] = useState<FittedPanel[]>([]);
@@ -84,6 +101,26 @@ export const ShadowAnalysisContainer: React.FC = () => {
       setTotalRoofArea(0);
     }
   }, [polygonPath]);
+
+  // 1b. Live update existing circle roof when radius slider or buttons change
+  useEffect(() => {
+    if (roofShapeType === 'circle' && polygonPath.length >= 3 && window.google) {
+      let sumLat = 0, sumLng = 0;
+      polygonPath.forEach(pt => { sumLat += pt.lat; sumLng += pt.lng; });
+      const center = { lat: sumLat / polygonPath.length, lng: sumLng / polygonPath.length };
+
+      const circlePts: google.maps.LatLngLiteral[] = [];
+      const numPoints = 32;
+      for (let i = 0; i < numPoints; i++) {
+        const angle = (i * 2 * Math.PI) / numPoints;
+        const x = circleRoofRadius * Math.sin(angle);
+        const y = circleRoofRadius * Math.cos(angle);
+        const ll = metersToLatLng({ x, y }, center, window.google.maps);
+        circlePts.push({ lat: ll.lat(), lng: ll.lng() });
+      }
+      setPolygonPath(circlePts);
+    }
+  }, [circleRoofRadius]);
 
   // 2. Recalculate Panel Layout and Shading
   const performAnalysis = useCallback(() => {
@@ -113,12 +150,22 @@ export const ShadowAnalysisContainer: React.FC = () => {
         googleMaps
       );
 
-      // Perform shading simulation
+      // Build shading config from current state
+      const shadingConfig: ShadingConfig = {
+        analysisDate: analysisDate ? new Date(analysisDate) : undefined,
+        timeStart,
+        timeEnd,
+        panelTiltDeg: panelSpec.tiltDeg,
+        panelAzimuthDeg: panelSpec.azimuthDeg
+      };
+
+      // Perform shading simulation with config
       const shadingResult = calculateShading(
         layoutResult.panels,
         currentObs,
         siteLatLng,
-        googleMaps
+        googleMaps,
+        shadingConfig
       );
 
       // Filter out highly-shaded panels (shading loss > 40%) to optimize layout based on height shadows
@@ -128,14 +175,35 @@ export const ShadowAnalysisContainer: React.FC = () => {
       setExcludedPanels(shadingResult.totalNotRecommended);
       setSystemSizeKw(shadingResult.usablePanelsCount * panelSpec.wattage / 1000);
       setOverallShadingLoss(shadingResult.overallShadingLoss);
+
+      // Compute shadow overlay polygons for map visualization
+      if (showShadowOverlay && currentObs.length > 0) {
+        const previewDate = new Date(analysisDate || new Date());
+        previewDate.setHours(shadowPreviewHour, 0, 0, 0);
+        const vizResult = calculateShadowPolygonsForVisualization(
+          currentObs, siteLatLng, previewDate, googleMaps
+        );
+        // Convert local meter coords to LatLng for map overlay
+        const origin = siteLatLng;
+        const latLngPolygons = vizResult.shadowPolygons.map(poly =>
+          poly.map(pt => {
+            const ll = metersToLatLng(pt, origin, googleMaps);
+            return { lat: ll.lat(), lng: ll.lng() };
+          })
+        );
+        setShadowOverlayPolygons(latLngPolygons);
+      } else {
+        setShadowOverlayPolygons([]);
+      }
     } else {
       setFittedPanels([]);
       setUsablePanels(0);
       setExcludedPanels(0);
       setSystemSizeKw(0);
       setOverallShadingLoss(0);
+      setShadowOverlayPolygons([]);
     }
-  }, [polygonPath, siteLatLng, panelSpec, layoutConfig, obstructions, isDrawingObs, obsDrawingType, activeObsPath, activeObsHeight]);
+  }, [polygonPath, siteLatLng, panelSpec, layoutConfig, obstructions, isDrawingObs, obsDrawingType, activeObsPath, activeObsHeight, analysisDate, timeStart, timeEnd, showShadowOverlay, shadowPreviewHour]);
 
   const handlePolygonEdit = useCallback(() => {
     if (polygonInstance) {
@@ -428,9 +496,24 @@ export const ShadowAnalysisContainer: React.FC = () => {
   const handleMapClick = (e: google.maps.MapMouseEvent) => {
     if (e.latLng && siteLatLng) {
       if (currentStep === 2) {
-        // Custom drawing: append new vertex coordinates on click
-        const newVertex = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-        setPolygonPath(prev => [...prev, newVertex]);
+        if (roofShapeType === 'circle') {
+          // Generate 32-point smooth circular polygon around clicked center
+          const center = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+          const circlePts: google.maps.LatLngLiteral[] = [];
+          const numPoints = 32;
+          for (let i = 0; i < numPoints; i++) {
+            const angle = (i * 2 * Math.PI) / numPoints;
+            const x = circleRoofRadius * Math.sin(angle);
+            const y = circleRoofRadius * Math.cos(angle);
+            const ll = metersToLatLng({ x, y }, center, window.google?.maps);
+            circlePts.push({ lat: ll.lat(), lng: ll.lng() });
+          }
+          setPolygonPath(circlePts);
+        } else {
+          // Custom drawing: append new vertex coordinates on click
+          const newVertex = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+          setPolygonPath(prev => [...prev, newVertex]);
+        }
       } else if (currentStep === 3) {
         if (isDrawingObs && obsDrawingType === 'polygon') {
           // Custom drawing polygon obstruction: append vertex coordinates
@@ -560,6 +643,31 @@ export const ShadowAnalysisContainer: React.FC = () => {
                 onPolygonChange={setPolygonPath}
                 onClear={() => setPolygonPath([])}
                 areaSqm={totalRoofArea}
+                projectName={projectName}
+                setProjectName={setProjectName}
+                drawMode={drawMode}
+                setDrawMode={setDrawMode}
+                roofShapeType={roofShapeType}
+                setRoofShapeType={setRoofShapeType}
+                circleRoofRadius={circleRoofRadius}
+                setCircleRoofRadius={setCircleRoofRadius}
+                analysisDate={analysisDate}
+                setAnalysisDate={setAnalysisDate}
+                timeStart={timeStart}
+                setTimeStart={setTimeStart}
+                timeEnd={timeEnd}
+                setTimeEnd={setTimeEnd}
+                panelTiltDeg={panelSpec.tiltDeg}
+                setPanelTiltDeg={(val) => setPanelSpec({ ...panelSpec, tiltDeg: val })}
+                panelAzimuthDeg={panelSpec.azimuthDeg}
+                setPanelAzimuthDeg={(val) => setPanelSpec({ ...panelSpec, azimuthDeg: val })}
+                pitchDistance={layoutConfig.pitchDistance}
+                setPitchDistance={(val) => setLayoutConfig({ ...layoutConfig, pitchDistance: val })}
+                onSuggestPitch={() => {
+                  const lat = siteLatLng?.lat ?? 19.076;
+                  const suggested = calculateSuggestedPitchDistance(panelSpec.length, panelSpec.tiltDeg, lat);
+                  setLayoutConfig({ ...layoutConfig, pitchDistance: suggested });
+                }}
               />
             )}
 
@@ -702,6 +810,9 @@ export const ShadowAnalysisContainer: React.FC = () => {
             roofPolygon={polygonPath}
             panels={fittedPanels}
             obstructions={obstructions}
+            panelSpec={panelSpec}
+            siteLatLng={siteLatLng}
+            analysisDate={analysisDate}
           />
         ) : (
           isLoaded && siteLatLng && (
@@ -756,6 +867,25 @@ export const ShadowAnalysisContainer: React.FC = () => {
                     options={{
                       fillColor: '#ef4444',
                       fillOpacity: 0.22,
+                      strokeColor: '#dc2626',
+                      strokeWeight: 2,
+                      clickable: true
+                    }}
+                    onClick={() => setActiveObsId(obs.id)}
+                  />
+                ))}
+
+              {/* Draw completed circular tank / cylinder obstructions as Circles on map */}
+              {obstructions
+                .filter(obs => obs.type !== 'polygon')
+                .map(obs => (
+                  <Circle
+                    key={`circle_obs_${obs.id}`}
+                    center={{ lat: obs.lat, lng: obs.lng }}
+                    radius={obs.widthMeters / 2}
+                    options={{
+                      fillColor: '#ef4444',
+                      fillOpacity: 0.35,
                       strokeColor: '#dc2626',
                       strokeWeight: 2,
                       clickable: true
@@ -819,10 +949,25 @@ export const ShadowAnalysisContainer: React.FC = () => {
                 setActiveId={setActiveObsId}
               />
 
-              {/* Draw panels fitting overlay - only in step 4 */}
-              {currentStep === 4 && (
+              {/* Draw panels fitting overlay whenever roof outline is drawn */}
+              {polygonPath.length >= 3 && (
                 <PanelOverlay panels={fittedPanels} />
               )}
+
+              {/* Draw real-time calculated shadow overlay polygons */}
+              {shadowOverlayPolygons.map((polyPath, idx) => (
+                <Polygon
+                  key={`shadow_overlay_${idx}`}
+                  path={polyPath}
+                  options={{
+                    fillColor: '#0f172a',
+                    fillOpacity: 0.35,
+                    strokeColor: '#334155',
+                    strokeWeight: 1,
+                    clickable: false
+                  }}
+                />
+              ))}
             </GoogleMap>
           )
         )}

@@ -10,6 +10,8 @@ export interface PanelSpec {
   width: number;       // default 1.1m
   length: number;      // default 1.7m
   wattage: number;     // default 550W
+  tiltDeg: number;     // panel tilt angle in degrees (0 = flat, typically 10-25)
+  azimuthDeg: number;  // panel facing direction in degrees (0=North, 180=South)
 }
 
 export interface LayoutConfig {
@@ -17,6 +19,8 @@ export interface LayoutConfig {
   rowSpacing: number;  // default 0.02m
   colSpacing: number;  // default 0.02m
   orientation: 'portrait' | 'landscape';
+  pitchDistance: number;  // row-to-row pitch in meters (overrides rowSpacing when tilt > 0)
+  layoutType: 'custom' | '2mx1m' | '2.3mx1.1m' | '2.1mx1.05m';  // preset layout dimensions
 }
 
 export interface Obstruction {
@@ -98,9 +102,18 @@ export function calculatePanelLayout(
   const fittedPanels: FittedPanel[] = [];
   let panelIdCounter = 1;
 
-  // Step and grid scan
+  // Step and grid scan — use pitch distance for row spacing when panels are tilted
   const xStep = panelW + layoutConfig.colSpacing;
-  const yStep = panelH + layoutConfig.rowSpacing;
+  let effectiveRowSpacing = panelH + layoutConfig.rowSpacing;
+  if (panelSpec.tiltDeg > 0 && layoutConfig.pitchDistance > 0) {
+    // Pitch distance in solar engineering is row-to-row center distance.
+    // If pitchDistance is greater than panel height, use it directly as yStep.
+    // If pitchDistance is smaller than panel height (e.g. user entered inter-row gap), add panelH to it.
+    effectiveRowSpacing = layoutConfig.pitchDistance >= panelH
+      ? layoutConfig.pitchDistance
+      : panelH + layoutConfig.pitchDistance;
+  }
+  const yStep = effectiveRowSpacing;
 
   for (let x = minX + layoutConfig.setback; x <= maxX - layoutConfig.setback - panelW; x += xStep) {
     for (let y = minY + layoutConfig.setback; y <= maxY - layoutConfig.setback - panelH; y += yStep) {
