@@ -1148,7 +1148,7 @@ export const Leads: React.FC = () => {
                 {/* Uploaded Gallery Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {installPhotos.map((photo) => {
-                    const objectUrl = URL.createObjectURL(photo.photoBlob);
+                    const objectUrl = typeof photo.photoBlob === 'string' ? photo.photoBlob : URL.createObjectURL(photo.photoBlob);
                     return (
                       <div key={photo.id} className="border border-slate-200 rounded-xl p-3 bg-white space-y-3 shadow-xs">
                         <div className="flex justify-between items-start">
@@ -1305,11 +1305,14 @@ export const Leads: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const url = URL.createObjectURL(regChecklist.bankDocumentBlob!);
+                                    const url = typeof regChecklist.bankDocumentBlob === 'string' ? regChecklist.bankDocumentBlob : URL.createObjectURL(regChecklist.bankDocumentBlob as Blob);
                                     const a = document.createElement('a');
                                     a.href = url;
+                                    a.target = '_blank';
                                     a.download = `Bank_File_${selectedLead.name.replace(/\s+/g, '_')}`;
+                                    document.body.appendChild(a);
                                     a.click();
+                                    document.body.removeChild(a);
                                   }}
                                   className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold"
                                 >

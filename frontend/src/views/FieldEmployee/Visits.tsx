@@ -64,6 +64,19 @@ export const Visits: React.FC = () => {
     loadData();
   }, [currentRole, currentUser]);
 
+  const renderBlobImage = (fileOrBlobOrUrl: any): string => {
+    if (!fileOrBlobOrUrl) return '';
+    if (typeof fileOrBlobOrUrl === 'string') return fileOrBlobOrUrl.trim();
+    if (fileOrBlobOrUrl instanceof Blob || fileOrBlobOrUrl instanceof File) {
+      try {
+        return URL.createObjectURL(fileOrBlobOrUrl);
+      } catch (e) {
+        return '';
+      }
+    }
+    return '';
+  };
+
   useEffect(() => {
     if (window.location.pathname.endsWith('/new')) {
       setShowLogForm(true);
@@ -188,13 +201,7 @@ export const Visits: React.FC = () => {
     return found ? `Client: ${found.name}` : `Client (Deleted)`;
   };
 
-  const renderBlobImage = (blob: Blob) => {
-    try {
-      return URL.createObjectURL(blob);
-    } catch (e) {
-      return '';
-    }
-  };
+
 
   return (
     <div className="space-y-6">

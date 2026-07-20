@@ -59,8 +59,8 @@ export interface OrderConfirmation {
   advanceAmount: number;
   paymentMode: 'transaction_id' | 'utr' | 'cheque' | 'cash';
   paymentReference?: string;
-  clientSignatureBlob: Blob; // PNG from signature canvas
-  confirmationPdfBlob?: Blob;
+  clientSignatureBlob: Blob | string; // PNG or Firebase Storage URL
+  confirmationPdfBlob?: Blob | string;
   createdBy: string;
   createdAt: string;
 }
@@ -69,7 +69,7 @@ export interface ClientDocument {
   id: string;
   leadId: string;
   docType: 'pan_card' | 'aadhar_card' | 'electricity_bill' | 'tax_paper' | 'account_details';
-  fileBlob: Blob;
+  fileBlob: Blob | string;
   uploadedBy: string;
   uploadedAt: string;
 }
@@ -79,7 +79,7 @@ export interface ClientRegistration {
   registrationDone: boolean;
   fileMade: boolean;
   bankFileUploaded: boolean;
-  bankDocumentBlob?: Blob;
+  bankDocumentBlob?: Blob | string;
   loanStatus: 'pending' | 'approved' | 'rejected';
   updatedAt: string;
 }
@@ -95,7 +95,7 @@ export interface InstallationPhoto {
   id: string;
   leadId: string;
   photoType: 'earthing' | 'meter' | 'grouting' | 'other';
-  photoBlob: Blob;
+  photoBlob: Blob | string;
   location: GeoLocation;
   uploadedBy: string;
 }
@@ -103,7 +103,7 @@ export interface InstallationPhoto {
 export interface ReleaseDocument {
   id: string;
   leadId: string;
-  fileBlob: Blob; // image or PDF
+  fileBlob: Blob | string; // image or PDF or URL
   uploadedBy: string;
   uploadedAt: string;
   notes?: string;
@@ -117,7 +117,7 @@ export interface FieldVisitReport {
   personMetContact: string;
   description: string;
   location: GeoLocation;
-  photoBlobs: Blob[];
+  photoBlobs: (Blob | string)[];
   visitedAt: string;
 }
 

@@ -64,7 +64,9 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
   // Safe helper to convert any Blob, Data URL, or Firebase HTTPS string into a renderable URL
   const renderBlobImage = (fileOrBlobOrUrl: any): string => {
     if (!fileOrBlobOrUrl) return '';
-    if (typeof fileOrBlobOrUrl === 'string') return fileOrBlobOrUrl;
+    if (typeof fileOrBlobOrUrl === 'string') {
+      return fileOrBlobOrUrl.trim();
+    }
     if (fileOrBlobOrUrl instanceof Blob || fileOrBlobOrUrl instanceof File) {
       try {
         return URL.createObjectURL(fileOrBlobOrUrl);
@@ -72,23 +74,56 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
         return '';
       }
     }
+    if (typeof fileOrBlobOrUrl === 'object') {
+      if (fileOrBlobOrUrl.url && typeof fileOrBlobOrUrl.url === 'string') return fileOrBlobOrUrl.url;
+      if (fileOrBlobOrUrl.data && typeof fileOrBlobOrUrl.data === 'string') return fileOrBlobOrUrl.data;
+    }
     return '';
   };
 
   // Safe helper to trigger browser download for any document format
-  const handleDownloadFile = (fileOrBlobOrUrl: any, defaultFileName: string) => {
+  const handleDownloadFile = async (fileOrBlobOrUrl: any, defaultFileName: string) => {
     const url = renderBlobImage(fileOrBlobOrUrl);
     if (!url) {
-      alert('Unable to generate URL for this document.');
+      alert('The file URL is missing or not available for this document.');
       return;
     }
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = defaultFileName;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+
+    try {
+      if (url.startsWith('http')) {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const localUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = localUrl;
+        a.download = defaultFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(localUrl), 1000);
+        return;
+      }
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = defaultFileName;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      console.warn("Direct download fallback:", err);
+      window.open(url, '_blank');
+    }
+  };
+
+  const handleViewPreview = (fileOrBlobOrUrl: any, title: string) => {
+    const url = renderBlobImage(fileOrBlobOrUrl);
+    if (!url) {
+      alert(`The document preview for "${title}" is not available. Please re-upload the document.`);
+      return;
+    }
+    setPreviewItem({ url, title });
   };
 
   return (
@@ -199,10 +234,7 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
               <div className="flex gap-2 mt-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    const url = renderBlobImage(q.pdfBlob);
-                    setPreviewItem({ url, title: `Quotation ${q.quotationNumber}` });
-                  }}
+                  onClick={() => handleViewPreview(q.pdfBlob, `Quotation ${q.quotationNumber}`)}
                   className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -251,7 +283,7 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
                   src={renderBlobImage(confirmation.clientSignatureBlob)}
                   alt="Client Signature preview"
                   className="h-12 border border-slate-200 rounded p-1 bg-slate-50 cursor-pointer hover:border-slate-400"
-                  onClick={() => setPreviewItem({ url: renderBlobImage(confirmation.clientSignatureBlob), title: `Signature - ${lead.name}` })}
+                  onClick={() => handleViewPreview(confirmation.clientSignatureBlob, `Signature - ${lead.name}`)}
                 />
               </div>
             )}
@@ -260,7 +292,7 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
               <div className="flex gap-2 mt-3">
                 <button
                   type="button"
-                  onClick={() => setPreviewItem({ url: renderBlobImage(confirmation.confirmationPdfBlob), title: `Order Confirmation Receipt - ${lead.name}` })}
+                  onClick={() => handleViewPreview(confirmation.confirmationPdfBlob, `Order Confirmation Receipt - ${lead.name}`)}
                   className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -364,14 +396,13 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
             </span>
             <div className="space-y-2 mt-2">
               {documents.map((doc) => {
-                const url = renderBlobImage(doc.fileBlob);
                 return (
                   <div key={doc.id} className="flex justify-between items-center text-xs p-2 bg-slate-50 border border-slate-100 rounded-lg hover:bg-slate-100 transition-colors">
                     <span className="font-semibold text-slate-700 uppercase">{doc.docType.replace('_', ' ')}</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setPreviewItem({ url, title: `${doc.docType.toUpperCase().replace('_', ' ')} - ${lead.name}` })}
+                        onClick={() => handleViewPreview(doc.fileBlob, `${doc.docType.toUpperCase().replace('_', ' ')} - ${lead.name}`)}
                         className="text-slate-600 hover:text-slate-800 font-bold cursor-pointer flex items-center gap-1 bg-white border border-slate-200 px-2 py-0.5 rounded shadow-xs"
                       >
                         <Eye className="w-3 h-3 text-slate-500" />
@@ -415,14 +446,18 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
                     <span className="absolute top-3 left-3 bg-slate-900/70 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase z-10">
                       {ph.photoType}
                     </span>
-                    <div className="relative overflow-hidden rounded-lg bg-slate-200 aspect-video cursor-pointer" onClick={() => setPreviewItem({ url: imgUrl, title: `Installation Photo - ${ph.photoType.toUpperCase()}` })}>
-                      <img
-                        src={imgUrl}
-                        alt={`${ph.photoType} photo`}
-                        className="w-full h-full object-cover hover:scale-110 transition-transform"
-                      />
+                    <div className="relative overflow-hidden rounded-lg bg-slate-200 aspect-video cursor-pointer" onClick={() => handleViewPreview(ph.photoBlob, `Installation Photo - ${ph.photoType.toUpperCase()}`)}>
+                      {imgUrl ? (
+                        <img
+                          src={imgUrl}
+                          alt={`${ph.photoType} photo`}
+                          className="w-full h-full object-cover hover:scale-110 transition-transform"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">Photo Unavailable</div>
+                      )}
                       <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white">
-                        <button type="button" onClick={() => setPreviewItem({ url: imgUrl, title: `Installation Photo - ${ph.photoType.toUpperCase()}` })} className="p-1.5 bg-slate-800/80 rounded-full hover:bg-slate-700">
+                        <button type="button" onClick={() => handleViewPreview(ph.photoBlob, `Installation Photo - ${ph.photoType.toUpperCase()}`)} className="p-1.5 bg-slate-800/80 rounded-full hover:bg-slate-700">
                           <Eye className="w-4 h-4" />
                         </button>
                         <button type="button" onClick={() => handleDownloadFile(ph.photoBlob, `Installation_${ph.photoType}_${lead.name.replace(/\s+/g, '_')}`)} className="p-1.5 bg-slate-800/80 rounded-full hover:bg-slate-700">
@@ -463,7 +498,7 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
             <div className="flex gap-2 mt-3">
               <button
                 type="button"
-                onClick={() => setPreviewItem({ url: renderBlobImage(rel.fileBlob), title: `Release Document - ${lead.name}` })}
+                onClick={() => handleViewPreview(rel.fileBlob, `Release Document - ${lead.name}`)}
                 className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <Eye className="w-3.5 h-3.5" />
@@ -488,7 +523,7 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
       ))}
 
       {/* DOCUMENT & IMAGE FULLSCREEN PREVIEW MODAL OVERLAY */}
-      {previewItem && (
+      {previewItem && previewItem.url && previewItem.url.trim().length > 0 && (
         <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-slate-700 animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
@@ -519,7 +554,7 @@ export const Timeline: React.FC<TimelineProps> = ({ lead }) => {
                 <iframe src={previewItem.url} className="w-full h-[650px] border-0 rounded-xl bg-white" title={previewItem.title} />
               ) : (
                 <img
-                  src={previewItem.url}
+                  src={previewItem.url || undefined}
                   alt={previewItem.title}
                   className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-lg border border-slate-800 bg-black/50"
                 />
