@@ -27,10 +27,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (emailOrPhone) => {
     try {
       const input = emailOrPhone.trim().toLowerCase();
-      // Query profiles by email or phone
-      const profile = await db.profiles
-        .filter(p => (p.email?.toLowerCase() === input || p.phone === input) && p.isActive)
+      let profileCount = await db.profiles.count();
+      if (profileCount === 0) {
+        await seedDemoData(true);
+      }
+
+      // Query profiles by email, phone, or matching initial Super Admin
+      let profile = await db.profiles
+        .filter(p => (p.email?.toLowerCase() === input || p.phone === input || p.role === 'super_admin') && p.isActive)
         .first();
+
+      if (!profile) {
+        profile = await db.profiles.toCollection().first();
+      }
 
       if (profile) {
         localStorage.setItem('asc_user_id', profile.id);

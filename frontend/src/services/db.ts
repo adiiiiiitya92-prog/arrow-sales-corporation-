@@ -47,7 +47,7 @@ export class SolarCRMDatabase extends Dexie {
 export const db = new SolarCRMDatabase();
 
 /**
- * Clears all local mock data across all tables and seeds only 1 default Admin profile.
+ * Clears all local mock data across all tables and seeds only clean initial role accounts.
  */
 export async function seedDemoData(_force = true) {
   await db.transaction('rw', [
@@ -63,7 +63,7 @@ export async function seedDemoData(_force = true) {
     db.products,
     db.challans
   ], async () => {
-    // Clear all dummy mock data
+    // Clear all tables
     await db.profiles.clear();
     await db.leads.clear();
     await db.quotations.clear();
@@ -76,25 +76,53 @@ export async function seedDemoData(_force = true) {
     await db.products.clear();
     await db.challans.clear();
 
-    // Seed only 1 default Admin Profile for clean login access
-    const adminProfile: Profile = {
-      id: 'admin_1',
-      fullName: 'System Administrator',
-      phone: '9876543210',
-      role: 'super_admin',
-      email: 'admin@arrowsales.com',
-      aadhaarNumber: '123456789012',
-      panNumber: 'ABCDE1234F',
-      joiningDate: new Date().toISOString().split('T')[0],
-      designation: 'Managing Director',
-      isActive: true,
-      createdAt: new Date().toISOString()
-    };
+    // Clean initial System Role Profiles (Super Admin, Admin, Field Employee)
+    const initialProfiles: Profile[] = [
+      {
+        id: 'admin_super',
+        fullName: 'System Administrator',
+        phone: '9876543210',
+        role: 'super_admin',
+        email: 'admin@arrowsales.com',
+        aadhaarNumber: '123456789012',
+        panNumber: 'ABCDE1234F',
+        joiningDate: new Date().toISOString().split('T')[0],
+        designation: 'Managing Director',
+        isActive: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'admin_ops',
+        fullName: 'Operations Admin',
+        phone: '9876543211',
+        role: 'admin',
+        email: 'admin@arrow.com',
+        aadhaarNumber: '123456789013',
+        panNumber: 'ABCDE1234G',
+        joiningDate: new Date().toISOString().split('T')[0],
+        designation: 'Operations Manager',
+        isActive: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'emp_field',
+        fullName: 'Field Executive',
+        phone: '9876543220',
+        role: 'field_employee',
+        email: 'field@arrow.com',
+        aadhaarNumber: '123456789014',
+        panNumber: 'ABCDE1234H',
+        joiningDate: new Date().toISOString().split('T')[0],
+        designation: 'Field Inspector',
+        isActive: true,
+        createdAt: new Date().toISOString()
+      }
+    ];
 
-    await db.profiles.add(adminProfile);
+    await db.profiles.bulkAdd(initialProfiles);
   });
 
-  console.log("🧹 All mock data cleared successfully! Database starts 100% clean.");
+  console.log("🧹 Database clean initialized with production Super Admin, Admin, and Field Employee roles!");
 }
 
 /**

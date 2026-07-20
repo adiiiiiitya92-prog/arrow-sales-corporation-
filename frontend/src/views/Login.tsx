@@ -53,34 +53,34 @@ export const Login: React.FC = () => {
 
   const demoAccounts = [
     {
-      name: 'Vikram Aditya',
+      name: 'System Administrator',
       roleName: 'Super Admin',
       designation: 'Managing Director',
-      email: 'vikram.aditya@solar.com',
+      email: 'admin@arrowsales.com',
       phone: '9876543210',
       badgeColor: 'border-emerald-200/80 bg-emerald-50/50 hover:bg-emerald-50 text-emerald-800',
       tagColor: 'bg-emerald-600 text-white',
-      desc: 'Full system control, settings, and database reset actions.'
+      desc: 'Full system control, employee setup, settings, and database reset.'
     },
     {
-      name: 'Neha Sharma',
+      name: 'Operations Admin',
       roleName: 'Admin',
-      designation: 'HR Administrator',
-      email: 'neha.sharma@solar.com',
+      designation: 'Operations Manager',
+      email: 'admin@arrow.com',
       phone: '9876543211',
       badgeColor: 'border-sky-200/80 bg-sky-50/50 hover:bg-sky-50 text-sky-800',
       tagColor: 'bg-sky-600 text-white',
       desc: 'Manage employees, product catalogs, and view lead pipelines.'
     },
     {
-      name: 'Amit Patel',
+      name: 'Field Executive',
       roleName: 'Field Employee',
-      designation: 'Sales Executive',
-      email: 'amit.patel@solar.com',
+      designation: 'Field Inspector',
+      email: 'field@arrow.com',
       phone: '9876543220',
       badgeColor: 'border-amber-200/80 bg-amber-50/50 hover:bg-amber-50 text-amber-800',
       tagColor: 'bg-amber-600 text-white',
-      desc: 'Mobile-optimized views to log field visits and view assigned leads.'
+      desc: 'Mobile-optimized view to log field site visits and customer documents.'
     }
   ];
 
