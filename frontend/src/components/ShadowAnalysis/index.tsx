@@ -168,12 +168,25 @@ export const ShadowAnalysisContainer: React.FC = () => {
         shadingConfig
       );
 
-      // Filter out highly-shaded panels (shading loss > 40%) to optimize layout based on height shadows
-      const activePanels = shadingResult.panels.filter(p => p.isRecommended);
+      // Filter and sort recommended panels by lowest shading loss for highest solar yield
+      const recommendedPanels = shadingResult.panels
+        .filter(p => p.isRecommended)
+        .sort((a, b) => a.shadingLoss - b.shadingLoss);
+
+      // Apply Target System Sizing Mode filter (Max Fit / Custom Panel Count / Target kWp)
+      let targetLimit = recommendedPanels.length;
+      if (layoutConfig.targetSizingMode === 'custom_count' && layoutConfig.targetPanelCount && layoutConfig.targetPanelCount > 0) {
+        targetLimit = Math.min(recommendedPanels.length, layoutConfig.targetPanelCount);
+      } else if (layoutConfig.targetSizingMode === 'target_kw' && layoutConfig.targetKw && layoutConfig.targetKw > 0) {
+        const reqPanels = Math.ceil((layoutConfig.targetKw * 1000) / panelSpec.wattage);
+        targetLimit = Math.min(recommendedPanels.length, reqPanels);
+      }
+
+      const activePanels = recommendedPanels.slice(0, targetLimit);
       setFittedPanels(activePanels);
-      setUsablePanels(shadingResult.usablePanelsCount);
-      setExcludedPanels(shadingResult.totalNotRecommended);
-      setSystemSizeKw(shadingResult.usablePanelsCount * panelSpec.wattage / 1000);
+      setUsablePanels(activePanels.length);
+      setExcludedPanels(shadingResult.panels.length - activePanels.length);
+      setSystemSizeKw((activePanels.length * panelSpec.wattage) / 1000);
       setOverallShadingLoss(shadingResult.overallShadingLoss);
 
       // Compute shadow overlay polygons for map visualization

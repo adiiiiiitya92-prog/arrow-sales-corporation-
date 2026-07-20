@@ -181,6 +181,79 @@ _Generated using Solar CRM Shadow & Panel Layout Fitter._`
           <span>Layout & Sizing Settings</span>
         </h4>
 
+        {/* Target Panel Count / System Capacity Mode */}
+        <div className="space-y-2.5 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight block">
+            System Sizing Target (Kitne panels lagane hain?)
+          </span>
+          <div className="grid grid-cols-3 gap-1.5">
+            <button
+              type="button"
+              onClick={() => handleConfigChange('targetSizingMode', 'max_fit')}
+              className={`text-[9px] font-black py-1.5 px-2 rounded-xl transition-all border ${
+                (layoutConfig.targetSizingMode || 'max_fit') === 'max_fit'
+                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              🌟 Max Fit
+            </button>
+            <button
+              type="button"
+              onClick={() => handleConfigChange('targetSizingMode', 'custom_count')}
+              className={`text-[9px] font-black py-1.5 px-2 rounded-xl transition-all border ${
+                layoutConfig.targetSizingMode === 'custom_count'
+                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              🎯 Panel Count
+            </button>
+            <button
+              type="button"
+              onClick={() => handleConfigChange('targetSizingMode', 'target_kw')}
+              className={`text-[9px] font-black py-1.5 px-2 rounded-xl transition-all border ${
+                layoutConfig.targetSizingMode === 'target_kw'
+                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              ⚡ Target kWp
+            </button>
+          </div>
+
+          {layoutConfig.targetSizingMode === 'custom_count' && (
+            <div className="flex items-center space-x-2 pt-1">
+              <label className="text-[9px] font-bold text-slate-600 shrink-0">Target Panels Count:</label>
+              <input
+                type="number"
+                min="1"
+                max={totalPanels || 100}
+                value={layoutConfig.targetPanelCount || 10}
+                onChange={(e) => handleConfigChange('targetPanelCount', parseInt(e.target.value) || 1)}
+                className="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs font-black text-emerald-600 text-center outline-none"
+              />
+              <span className="text-[9px] text-slate-400 font-bold shrink-0">modules</span>
+            </div>
+          )}
+
+          {layoutConfig.targetSizingMode === 'target_kw' && (
+            <div className="flex items-center space-x-2 pt-1">
+              <label className="text-[9px] font-bold text-slate-600 shrink-0">Target System Size:</label>
+              <input
+                type="number"
+                step="0.5"
+                min="0.5"
+                max="100"
+                value={layoutConfig.targetKw || 5.0}
+                onChange={(e) => handleConfigChange('targetKw', parseFloat(e.target.value) || 0.5)}
+                className="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs font-black text-emerald-600 text-center outline-none"
+              />
+              <span className="text-[9px] text-slate-400 font-bold shrink-0">kWp</span>
+            </div>
+          )}
+        </div>
+
         {/* Panel Dimensions & Layout Preset */}
         <div className="space-y-2.5">
           <div className="flex justify-between items-center">

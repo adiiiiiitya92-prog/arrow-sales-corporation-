@@ -21,6 +21,9 @@ export interface LayoutConfig {
   orientation: 'portrait' | 'landscape';
   pitchDistance: number;  // row-to-row pitch in meters (overrides rowSpacing when tilt > 0)
   layoutType: 'custom' | '2mx1m' | '2.3mx1.1m' | '2.1mx1.05m';  // preset layout dimensions
+  targetSizingMode?: 'max_fit' | 'custom_count' | 'target_kw';
+  targetPanelCount?: number;
+  targetKw?: number;
 }
 
 export interface Obstruction {
