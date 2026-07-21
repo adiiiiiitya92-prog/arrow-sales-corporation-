@@ -7,6 +7,7 @@ import { productService } from '../../services/productService';
 import { pdfService } from '../../services/pdfService';
 import { Plus, Search, Truck, Trash2, ClipboardList, X } from 'lucide-react';
 import dayjs from 'dayjs';
+import logoImg from '../../assets/Arrow-sales-corporation_logo-300x84.png';
 
 export const Challans: React.FC = () => {
   const [challans, setChallans] = useState<Challan[]>([]);
@@ -427,6 +428,22 @@ export const Challans: React.FC = () => {
               {/* Expanded details section */}
               {isExpanded && (
                 <div className="mt-5 space-y-4 border-t border-slate-100 pt-4 animate-slide-down">
+                  {/* Company Logo & Official Header Banner */}
+                  <div className="bg-slate-900 text-white rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xs border border-slate-800">
+                    <div className="flex items-center gap-3">
+                      <img src={logoImg} alt="Arrow Sales Corporation Logo" className="h-9 w-auto bg-white/90 p-1.5 rounded-lg shrink-0" />
+                      <div>
+                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Arrow Sales Corporation</p>
+                        <p className="text-xs font-bold text-slate-200">Materials Delivery Challan & Dispatch Note</p>
+                      </div>
+                    </div>
+                    <div className="text-right sm:text-right self-end sm:self-auto">
+                      <span className="inline-block px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300 font-mono font-black text-xs border border-emerald-500/40">
+                        {ch.challanNumber}
+                      </span>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-600 font-semibold">
                     <div>
                       <p className="text-[10px] uppercase text-slate-400 tracking-wider mb-1">Customer / Project Details</p>
