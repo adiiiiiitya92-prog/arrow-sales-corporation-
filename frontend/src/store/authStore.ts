@@ -32,14 +32,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await seedDemoData(true);
       }
 
-      // Query profiles by email, phone, or matching initial Super Admin
-      let profile = await db.profiles
-        .filter(p => (p.email?.toLowerCase() === input || p.phone === input || p.role === 'super_admin') && p.isActive)
-        .first();
-
-      if (!profile) {
-        profile = await db.profiles.toCollection().first();
+      // Fetch fresh profiles from Firestore cloud database to ensure newly added admin/employee emails are synced
+      try {
+        const { fetchCollectionFromFirestore } = await import('../services/firebase');
+        const remoteProfiles = await fetchCollectionFromFirestore<Profile>('profiles');
+        if (remoteProfiles && remoteProfiles.length > 0) {
+          await db.profiles.bulkPut(remoteProfiles);
+        }
+      } catch (e) {
+        console.warn("Firestore profile sync note:", e);
       }
+
+      // Query profiles strictly by pre-approved email or phone
+      const profile = await db.profiles
+        .filter(p => (p.email?.toLowerCase() === input || p.phone === input) && p.isActive)
+        .first();
 
       if (profile) {
         localStorage.setItem('asc_user_id', profile.id);
@@ -52,6 +59,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         return true;
       }
+
+      console.warn(`Access Denied: Email/Phone "${input}" has not been pre-approved by Admin or Super Admin.`);
       return false;
     } catch (err) {
       console.error('Error logging in:', err);

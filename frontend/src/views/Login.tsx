@@ -26,7 +26,7 @@ export const Login: React.FC = () => {
     
     const success = await login(emailOrPhone);
     if (!success) {
-      setError('Invalid credentials. Please click a demo card below to sign in.');
+      setError(`Access Denied: Email/Phone "${emailOrPhone}" is not pre-approved by Admin or Super Admin. Please ask your administrator to register your email ID in the Employee Directory.`);
       setIsSubmitting(false);
     }
   };

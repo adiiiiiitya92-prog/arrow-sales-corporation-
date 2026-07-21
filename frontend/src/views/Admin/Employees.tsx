@@ -48,8 +48,8 @@ export const Employees: React.FC = () => {
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !phone) {
-      alert('Please fill out all fields.');
+    if (!fullName || !phone || !email) {
+      alert('Please fill out Full Name, Phone Number, and Official Email Address.');
       return;
     }
 
@@ -229,13 +229,14 @@ export const Employees: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-500 mb-1">Email Address (Optional)</label>
+                <label className="block text-slate-500 mb-1">Official Email Address (Required for User Sign In)</label>
                 <input
                   type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. name@company.com"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  placeholder="e.g. employee@arrowsales.com"
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-semibold"
                 />
               </div>
 
