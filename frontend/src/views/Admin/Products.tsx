@@ -28,28 +28,35 @@ export const Products: React.FC = () => {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || rate <= 0) {
-      alert('Please fill out Name and a valid price Rate.');
+      alert('Please fill out Product Name and a valid price Rate.');
       return;
     }
 
-    await productService.createProduct({
-      name,
-      category,
-      rate,
-      description: description || undefined,
-      stockQuantity: Number(stockQuantity) || 0,
-      minStockThreshold: Number(minStockThreshold) || 0
-    });
+    try {
+      await productService.createProduct({
+        name,
+        category,
+        rate: Number(rate),
+        description: description || undefined,
+        stockQuantity: Number(stockQuantity) || 0,
+        minStockThreshold: Number(minStockThreshold) || 0
+      });
 
-    // Reset Form
-    setName('');
-    setCategory('solar_panel');
-    setRate(0);
-    setDescription('');
-    setStockQuantity(0);
-    setMinStockThreshold(5);
-    setShowAddModal(false);
-    loadProducts();
+      alert(`Product "${name}" successfully saved to Catalog & Database!`);
+
+      // Reset Form
+      setName('');
+      setCategory('solar_panel');
+      setRate(0);
+      setDescription('');
+      setStockQuantity(0);
+      setMinStockThreshold(5);
+      setShowAddModal(false);
+      await loadProducts();
+    } catch (err) {
+      console.error("Error creating product:", err);
+      alert('Error saving product. Please try again.');
+    }
   };
 
   const handleDeleteProduct = async (id: string) => {

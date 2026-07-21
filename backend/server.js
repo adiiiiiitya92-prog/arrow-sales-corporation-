@@ -125,6 +125,16 @@ app.post('/api/products', async (req, res) => {
   }
 });
 
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.collection('products').doc(id).delete();
+    res.json({ success: true, id });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete product', details: String(err) });
+  }
+});
+
 // ===================================
 // 4. DELIVERY CHALLANS API
 // ===================================
