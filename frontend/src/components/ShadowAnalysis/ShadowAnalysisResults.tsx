@@ -15,6 +15,7 @@ interface ShadowAnalysisResultsProps {
   overallShadingLoss: number;
   onRecalculate: () => void;
   onExport: () => void;
+  onSaveDesign?: () => void;
   address?: string;
 }
 
@@ -31,6 +32,7 @@ export const ShadowAnalysisResults: React.FC<ShadowAnalysisResultsProps> = ({
   overallShadingLoss,
   onRecalculate,
   onExport,
+  onSaveDesign,
   address = ''
 }) => {
   const sunEfficiency = 100 - overallShadingLoss;
@@ -427,27 +429,40 @@ _Generated using Solar CRM Shadow & Panel Layout Fitter._`
         </div>
       </div>
       
-      {/* EXPORT & SHARE WORKFLOW */}
-      <div className="flex gap-2 pb-2">
-        <button
-          onClick={onExport}
-          className="flex-1 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-white text-xs font-extrabold py-3.5 rounded-xl shadow transition-all cursor-pointer flex items-center justify-center space-x-1"
-        >
-          <span>Export PDF</span>
-        </button>
+      {/* EXPORT & SAVE & SHARE WORKFLOW */}
+      <div className="space-y-2 pb-2">
+        {onSaveDesign && (
+          <button
+            type="button"
+            onClick={onSaveDesign}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black py-3 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center space-x-1.5 uppercase tracking-wider"
+          >
+            <span>💾 Save Design & Assign to Customer</span>
+          </button>
+        )}
+        
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onExport}
+            className="flex-1 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-white text-xs font-extrabold py-3 rounded-xl shadow transition-all cursor-pointer flex items-center justify-center space-x-1"
+          >
+            <span>Export PDF</span>
+          </button>
 
-        <a
-          href={getWhatsAppShareUrl()}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-4 py-3.5 rounded-xl shadow transition-all flex items-center justify-center space-x-1.5 cursor-pointer no-underline border border-emerald-700"
-        >
-          <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
-            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.464L0 24zm6.59-4.846c1.6.95 3.198 1.451 4.796 1.452 5.518 0 9.986-4.477 9.989-9.999.002-2.675-1.03-5.19-2.903-7.07C16.559 1.65 14.07 0.61 11.458 0.61c-5.522 0-10.014 4.495-10.016 10.02-.001 1.705.452 3.37 1.31 4.86L1.71 21.05l5.77-1.516c-1.125-.626-2.28-1.52-2.83-2.046z"/>
-            <path d="M17.487 14.39c-.27-.136-1.602-.79-1.85-.88-.25-.09-.43-.136-.61.136-.18.27-.69.88-.85 1.06-.15.18-.3.2-.57.064-.27-.135-1.137-.42-2.167-1.34-.8-.713-1.34-1.595-1.5-1.86-.15-.27-.015-.415.12-.55.125-.124.27-.315.405-.47.135-.16.18-.27.27-.45.09-.18.045-.34-.02-.47-.07-.13-.61-1.47-.83-2.01-.22-.53-.44-.45-.61-.46h-.52c-.18 0-.47.07-.72.34-.25.27-.95.93-.95 2.27s.97 2.63 1.11 2.82c.14.19 1.9 2.9 4.6 4.07.64.28 1.14.45 1.53.57.65.2 1.24.18 1.7.11.52-.08 1.6-.66 1.83-1.29.23-.63.23-1.18.16-1.29-.07-.12-.27-.18-.54-.315z"/>
-          </svg>
-          <span>WhatsApp</span>
-        </a>
+          <a
+            href={getWhatsAppShareUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-extrabold px-4 py-3 rounded-xl shadow-xs transition-all flex items-center justify-center space-x-1.5 cursor-pointer no-underline border border-emerald-200"
+          >
+            <svg className="w-4 h-4 fill-current shrink-0 text-emerald-600" viewBox="0 0 24 24">
+              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.464L0 24zm6.59-4.846c1.6.95 3.198 1.451 4.796 1.452 5.518 0 9.986-4.477 9.989-9.999.002-2.675-1.03-5.19-2.903-7.07C16.559 1.65 14.07 0.61 11.458 0.61c-5.522 0-10.014 4.495-10.016 10.02-.001 1.705.452 3.37 1.31 4.86L1.71 21.05l5.77-1.516c-1.125-.626-2.28-1.52-2.83-2.046z"/>
+              <path d="M17.487 14.39c-.27-.136-1.602-.79-1.85-.88-.25-.09-.43-.136-.61.136-.18.27-.69.88-.85 1.06-.15.18-.3.2-.57.064-.27-.135-1.137-.42-2.167-1.34-.8-.713-1.34-1.595-1.5-1.86-.15-.27-.015-.415.12-.55.125-.124.27-.315.405-.47.135-.16.18-.27.27-.45.09-.18.045-.34-.02-.47-.07-.13-.61-1.47-.83-2.01-.22-.53-.44-.45-.61-.46h-.52c-.18 0-.47.07-.72.34-.25.27-.95.93-.95 2.27s.97 2.63 1.11 2.82c.14.19 1.9 2.9 4.6 4.07.64.28 1.14.45 1.53.57.65.2 1.24.18 1.7.11.52-.08 1.6-.66 1.83-1.29.23-.63.23-1.18.16-1.29-.07-.12-.27-.18-.54-.315z"/>
+            </svg>
+            <span>WhatsApp</span>
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, Polygon, Polyline, Circle } from '@react-google-maps/api';
-import { ChevronRight, ChevronLeft, MapPin, Sun, ShieldAlert, Rotate3d } from 'lucide-react';
+import { ChevronRight, ChevronLeft, MapPin, Sun, ShieldAlert, Rotate3d, History, Save, UserCheck, Trash2, Search, X, ExternalLink } from 'lucide-react';
 
 import SiteMapPicker from './SiteMapPicker';
 import RoofPolygonDrawer from './RoofPolygonDrawer';
@@ -19,6 +19,11 @@ import type {
 import { calculateShading, calculateShadowPolygonsForVisualization, calculateSuggestedPitchDistance } from '../../services/shadowAnalysisService';
 import type { ShadingConfig } from '../../services/shadowAnalysisService';
 import { latLngToMeters, metersToLatLng } from '../../services/geometryUtils';
+
+import { shadowAnalysisHistoryService } from '../../services/shadowAnalysisHistoryService';
+import { leadService } from '../../services/leadService';
+import type { ShadowAnalysisRecord, Lead } from '../../types';
+import dayjs from 'dayjs';
 
 // Only request geometry library (drawing & places are deprecated legacy APIs)
 const libraries: "geometry"[] = ['geometry'];
@@ -89,6 +94,117 @@ export const ShadowAnalysisContainer: React.FC = () => {
   const [excludedPanels, setExcludedPanels] = useState(0);
 
   const [, setMapRef] = useState<google.maps.Map | null>(null);
+
+  // History & Customer Assignment state
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [savedReports, setSavedReports] = useState<ShadowAnalysisRecord[]>([]);
+  const [crmLeads, setCrmLeads] = useState<Lead[]>([]);
+  const [assignLeadId, setAssignLeadId] = useState('');
+  const [designDescription, setDesignDescription] = useState('');
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [editingReport, setEditingReport] = useState<ShadowAnalysisRecord | null>(null);
+
+  const loadHistoryAndLeads = async () => {
+    try {
+      const reports = await shadowAnalysisHistoryService.getReports();
+      setSavedReports(reports);
+      const leads = await leadService.getLeads();
+      setCrmLeads(leads);
+    } catch (e) {
+      console.warn("Error loading shadow history:", e);
+    }
+  };
+
+  useEffect(() => {
+    loadHistoryAndLeads();
+  }, []);
+
+  const handleOpenSaveModal = () => {
+    setEditingReport(null);
+    setAssignLeadId('');
+    setDesignDescription('');
+    setSaveModalOpen(true);
+  };
+
+  const handleEditReportAssignment = (report: ShadowAnalysisRecord) => {
+    setEditingReport(report);
+    setAssignLeadId(report.leadId || '');
+    setDesignDescription(report.description || '');
+    setSaveModalOpen(true);
+  };
+
+  const handleSaveDesign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projectName.trim()) {
+      alert("Please enter a Project Title.");
+      return;
+    }
+
+    const selectedLead = crmLeads.find(l => l.id === assignLeadId);
+
+    if (editingReport) {
+      await shadowAnalysisHistoryService.updateReportLeadAndDescription(
+        editingReport.id,
+        assignLeadId || undefined,
+        selectedLead ? selectedLead.name : undefined,
+        designDescription || undefined
+      );
+      alert("Shadow Analysis Customer Assignment & Notes updated successfully!");
+    } else {
+      await shadowAnalysisHistoryService.saveReport({
+        projectName,
+        leadId: assignLeadId || undefined,
+        leadName: selectedLead ? selectedLead.name : undefined,
+        description: designDescription || undefined,
+        latitude: siteLatLng?.lat || 0,
+        longitude: siteLatLng?.lng || 0,
+        address: address || 'Site Address',
+        roofAreaSqMeters: totalRoofArea,
+        systemSizeKw,
+        usablePanels,
+        shadingLossPercentage: overallShadingLoss,
+        panelSpec,
+        layoutConfig,
+        polygonPath,
+        obstructions,
+        createdBy: 'Admin'
+      });
+      alert(`Design "${projectName}" saved to Shadow Analysis History and assigned to ${selectedLead ? selectedLead.name : 'Customer'}!`);
+    }
+
+    setSaveModalOpen(false);
+    setEditingReport(null);
+    loadHistoryAndLeads();
+  };
+
+  const handleLoadDesignFromHistory = (report: ShadowAnalysisRecord) => {
+    if (confirm(`Do you want to load design "${report.projectName}" onto the 3D map workspace?`)) {
+      setSiteLatLng({ lat: report.latitude, lng: report.longitude });
+      setAddress(report.address);
+      setPolygonPath(report.polygonPath || []);
+      setObstructions(report.obstructions || []);
+      if (report.panelSpec) setPanelSpec(report.panelSpec);
+      if (report.layoutConfig) setLayoutConfig(report.layoutConfig);
+      setProjectName(report.projectName);
+      setCurrentStep(4);
+      setHistoryModalOpen(false);
+      alert(`Successfully loaded 3D design "${report.projectName}"!`);
+    }
+  };
+
+  const handleDeleteDesignFromHistory = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete design "${name}" from history?`)) {
+      await shadowAnalysisHistoryService.deleteReport(id);
+      loadHistoryAndLeads();
+    }
+  };
+
+  const filteredReports = savedReports.filter(r =>
+    r.projectName.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
+    (r.leadName && r.leadName.toLowerCase().includes(historySearchQuery.toLowerCase())) ||
+    r.address.toLowerCase().includes(historySearchQuery.toLowerCase())
+  );
 
   // 1. Calculate Roof Area when polygon changes
   useEffect(() => {
@@ -799,14 +915,24 @@ export const ShadowAnalysisContainer: React.FC = () => {
       <div className="w-full lg:w-[400px] flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-200 shrink-0 bg-slate-50/20">
         <div className="p-5 space-y-6 overflow-y-auto flex-1">
           {/* Header */}
-          <div>
-            <span className="text-[9px] text-emerald-600 font-black uppercase tracking-wider block">
-              Feature Module
-            </span>
-            <h2 className="text-lg font-black text-slate-900 tracking-tight flex items-center space-x-1.5 mt-0.5">
-              <Sun className="w-5 h-5 text-emerald-600 animate-pulse" />
-              <span>Roof Shadow Analysis</span>
-            </h2>
+          <div className="flex justify-between items-start">
+            <div>
+              <span className="text-[9px] text-emerald-600 font-black uppercase tracking-wider block">
+                Feature Module
+              </span>
+              <h2 className="text-lg font-black text-slate-900 tracking-tight flex items-center space-x-1.5 mt-0.5">
+                <Sun className="w-5 h-5 text-emerald-600 animate-pulse" />
+                <span>Roof Shadow Analysis</span>
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setHistoryModalOpen(true)}
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
+            >
+              <History className="w-3.5 h-3.5 text-emerald-400" />
+              <span>History ({savedReports.length})</span>
+            </button>
           </div>
 
           {/* Stepper Wizard Indicator */}
@@ -931,6 +1057,7 @@ export const ShadowAnalysisContainer: React.FC = () => {
 
             {currentStep === 4 && (
               <ShadowAnalysisResults
+                address={address}
                 panelSpec={panelSpec}
                 setPanelSpec={setPanelSpec}
                 layoutConfig={layoutConfig}
@@ -943,6 +1070,7 @@ export const ShadowAnalysisContainer: React.FC = () => {
                 overallShadingLoss={overallShadingLoss}
                 onRecalculate={performAnalysis}
                 onExport={handleExportPDF}
+                onSaveDesign={handleOpenSaveModal}
               />
             )}
           </div>
@@ -1182,6 +1310,241 @@ export const ShadowAnalysisContainer: React.FC = () => {
           )
         )}
       </div>
+
+      {/* MODAL 1: SAVE DESIGN & ASSIGN TO CUSTOMER */}
+      {saveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-6 space-y-4 animate-scale-in">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-2">
+                <Save className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-sm font-black text-slate-900">
+                  {editingReport ? 'Re-Assign Customer / Edit Notes' : 'Save Design & Assign Customer'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSaveModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDesign} className="space-y-4 text-xs font-semibold">
+              <div>
+                <label className="block text-slate-500 mb-1">Project / Design Title</label>
+                <input
+                  type="text"
+                  required
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="e.g. 5.5 kW Rooftop Solar Design"
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-500 mb-1">Assign Customer / CRM Lead (Optional)</label>
+                <select
+                  value={assignLeadId}
+                  onChange={(e) => setAssignLeadId(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold text-slate-800 cursor-pointer"
+                >
+                  <option value="">-- Select CRM Customer / Lead --</option>
+                  {crmLeads.map((lead) => (
+                    <option key={lead.id} value={lead.id}>
+                      👤 {lead.name} ({lead.requirement || 'Solar Inquiry'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-500 mb-1">Design Description / Custom Structural Notes</label>
+                <textarea
+                  rows={3}
+                  value={designDescription}
+                  onChange={(e) => setDesignDescription(e.target.value)}
+                  placeholder="e.g. High-efficiency 550W panels with 18 deg tilt, south facing, clear lift room shadow clearance."
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium text-slate-800"
+                />
+              </div>
+
+              {/* Design Quick Metrics Preview */}
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 grid grid-cols-3 gap-2 text-center text-[10px]">
+                <div>
+                  <span className="text-slate-400 font-bold block uppercase">Capacity</span>
+                  <span className="text-emerald-700 font-extrabold text-xs">{systemSizeKw.toFixed(2)} kWp</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-bold block uppercase">Roof Area</span>
+                  <span className="text-slate-800 font-extrabold text-xs">{totalRoofArea.toFixed(1)} m²</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-bold block uppercase">Shading Loss</span>
+                  <span className="text-amber-700 font-extrabold text-xs">{overallShadingLoss}%</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSaveModalOpen(false)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold shadow-md cursor-pointer uppercase tracking-wider text-[11px]"
+                >
+                  {editingReport ? 'Update Assignment' : 'Save to History'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: SHADOW ANALYSIS HISTORY & CUSTOMER ASSIGNMENTS */}
+      {historyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl h-[85vh] flex flex-col animate-scale-in">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700">
+                  <History className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">Shadow Analysis Design History</h3>
+                  <p className="text-xs text-slate-400 font-semibold">View, load, or assign 3D rooftop solar designs to CRM customers.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHistoryModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer p-1.5 rounded-full hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Controls Search */}
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3 shrink-0">
+              <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 flex items-center gap-2 flex-1">
+                <Search className="w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by project name, customer name, or site location..."
+                  value={historySearchQuery}
+                  onChange={(e) => setHistorySearchQuery(e.target.value)}
+                  className="text-xs font-semibold text-slate-800 bg-transparent outline-none w-full"
+                />
+              </div>
+              <span className="text-xs font-bold text-slate-500">
+                {filteredReports.length} Saved Design{filteredReports.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            {/* History Grid List */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              {filteredReports.length > 0 ? (
+                filteredReports.map((report) => (
+                  <div
+                    key={report.id}
+                    className="bg-white border border-slate-200 hover:border-emerald-500/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all space-y-3"
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-black text-slate-900">{report.projectName}</h4>
+                          {report.leadName ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              👤 {report.leadName}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-50 text-amber-700 border border-amber-200">
+                              Unassigned Customer
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-semibold mt-0.5 flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-emerald-600" />
+                          <span>{report.address || 'Site Address'}</span>
+                        </p>
+                      </div>
+
+                      <div className="text-right sm:text-right self-start sm:self-auto">
+                        <span className="text-[10px] text-slate-400 font-bold">
+                          {dayjs(report.createdAt).format('DD MMM YYYY • hh:mm A')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {report.description && (
+                      <p className="text-xs bg-slate-50 text-slate-600 p-2.5 rounded-xl border border-slate-100 font-medium">
+                        <span className="font-bold text-slate-800">Design Description:</span> {report.description}
+                      </p>
+                    )}
+
+                    {/* Technical Specs Badges */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-emerald-600 text-white">
+                        ⚡ {report.systemSizeKw.toFixed(2)} kWp System
+                      </span>
+                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200">
+                        📐 {report.roofAreaSqMeters.toFixed(1)} m² Roof
+                      </span>
+                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
+                        📊 {report.shadingLossPercentage}% Shading Loss
+                      </span>
+                    </div>
+
+                    {/* Actions Toolbar */}
+                    <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
+                      <button
+                        type="button"
+                        onClick={() => handleEditReportAssignment(report)}
+                        className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>Re-Assign Customer / Edit Notes</span>
+                      </button>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDesignFromHistory(report.id, report.projectName)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer rounded-lg hover:bg-rose-50"
+                          title="Delete Design"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleLoadDesignFromHistory(report)}
+                          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Load Design on 3D Map</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-12 text-center text-slate-400 space-y-2">
+                  <Sun className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="text-xs font-bold">No saved shadow analysis designs found.</p>
+                  <p className="text-[10px]">Create a 3D design and click "Save & Assign to Customer" to build your history.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

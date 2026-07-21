@@ -10,7 +10,8 @@ import type {
   ReleaseDocument,
   FieldVisitReport,
   Product,
-  Challan
+  Challan,
+  ShadowAnalysisRecord
 } from '../types';
 
 export class SolarCRMDatabase extends Dexie {
@@ -25,10 +26,11 @@ export class SolarCRMDatabase extends Dexie {
   fieldVisitReports!: Table<FieldVisitReport>;
   products!: Table<Product>;
   challans!: Table<Challan>;
+  shadowAnalyses!: Table<ShadowAnalysisRecord>;
 
   constructor() {
     super('SolarCRMDatabase');
-    this.version(2).stores({
+    this.version(3).stores({
       profiles: 'id, role, isActive',
       leads: 'id, assignedEmployeeId, status, createdAt',
       quotations: 'id, leadId, quotationNumber, createdAt',
@@ -39,7 +41,8 @@ export class SolarCRMDatabase extends Dexie {
       releaseDocuments: 'id, leadId',
       fieldVisitReports: 'id, employeeId, leadId, visitedAt',
       products: 'id, name, category',
-      challans: 'id, leadId, assignedEmployeeId, challanNumber, createdAt'
+      challans: 'id, leadId, assignedEmployeeId, challanNumber, createdAt',
+      shadowAnalyses: 'id, leadId, projectName, createdAt'
     });
   }
 }

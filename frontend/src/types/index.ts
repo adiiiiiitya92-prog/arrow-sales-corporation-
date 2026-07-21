@@ -152,3 +152,24 @@ export interface Challan {
   notes?: string;
   createdAt: string;
 }
+
+export interface ShadowAnalysisRecord {
+  id: string;
+  projectName: string;
+  leadId?: string;
+  leadName?: string;
+  description?: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  roofAreaSqMeters: number;
+  systemSizeKw: number;
+  usablePanels: number;
+  shadingLossPercentage: number;
+  panelSpec: any;
+  layoutConfig: any;
+  polygonPath: { lat: number; lng: number }[];
+  obstructions: any[];
+  createdBy: string;
+  createdAt: string;
+}
