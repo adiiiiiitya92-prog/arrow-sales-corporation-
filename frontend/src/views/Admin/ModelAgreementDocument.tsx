@@ -740,7 +740,7 @@ ${stylesheets}
 
           <div className="model-agreement-print-container flex flex-col items-center space-y-6 print:space-y-0 w-full">
             {/* PAGE 1: Model Agreement with Stamp Paper Header Space */}
-          <div className="model-agreement-page bg-white shadow-xl w-[210mm] h-[297mm] max-h-[297mm] p-[8mm_12mm] text-slate-900 flex flex-col justify-between font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-[9.8pt] leading-[1.18] text-justify overflow-hidden">
+          <div className="model-agreement-page bg-white shadow-xl w-[210mm] min-h-[297mm] p-[8mm_12mm] text-slate-900 flex flex-col justify-between font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-[9.8pt] leading-[1.18] text-justify">
             <div>
               {/* Blank Stamp Paper Header Space */}
               <div 
@@ -869,7 +869,7 @@ ${stylesheets}
           </div>
 
           {/* PAGE 2: Exact Screenshot Text */}
-          <div className="model-agreement-page bg-white shadow-xl w-[210mm] h-[297mm] max-h-[297mm] p-[10mm_12mm] text-slate-900 flex flex-col justify-between font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-[9.8pt] leading-[1.18] text-justify overflow-hidden">
+          <div className="model-agreement-page bg-white shadow-xl w-[210mm] min-h-[297mm] p-[10mm_12mm] text-slate-900 flex flex-col justify-between font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-[9.8pt] leading-[1.18] text-justify">
             <div className="space-y-2 pt-0.5">
               
               {/* Top Continuation Paragraph from General Terms */}
@@ -951,7 +951,7 @@ ${stylesheets}
           </div>
 
           {/* PAGE 3: Exact Screenshot Text */}
-          <div className="model-agreement-page bg-white shadow-xl w-[210mm] h-[297mm] max-h-[297mm] p-[10mm_12mm] text-slate-900 flex flex-col justify-between font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-[9.5pt] leading-[1.18] text-justify overflow-hidden">
+          <div className="model-agreement-page bg-white shadow-xl w-[210mm] min-h-[297mm] p-[10mm_12mm] text-slate-900 flex flex-col justify-between font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-[9.5pt] leading-[1.18] text-justify">
             <div className="space-y-2 pt-0.5">
               
               {/* Top Continuation Line from Page 2 */}
