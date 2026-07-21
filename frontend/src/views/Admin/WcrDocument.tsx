@@ -1164,11 +1164,11 @@ export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
               </div>
 
               {/* PAGE 2: Guarantee Certificate Undertaking & Aadhar Xerox */}
-              <div className="dcr-page bg-white shadow-xl w-[210mm] h-[297mm] max-h-[297mm] p-[15mm] text-slate-900 flex flex-col justify-between font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-xs leading-relaxed overflow-hidden">
+              <div className="dcr-page bg-white shadow-xl w-[210mm] min-h-[297mm] p-[16mm_20mm] text-slate-900 flex flex-col justify-start font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-xs leading-relaxed space-y-6">
                 <div className="space-y-6">
                   {/* Page 2 Title */}
                   <div 
-                    className="font-bold text-sm leading-snug font-serif pt-2 text-slate-900"
+                    className="font-bold text-sm leading-snug font-serif pt-4 text-black"
                     contentEditable={isEditable}
                     suppressContentEditableWarning={true}
                   >
@@ -1177,7 +1177,7 @@ export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
 
                   {/* Guarantee Undertaking Declaration Paragraph */}
                   <div 
-                    className="text-xs text-justify leading-relaxed font-serif text-slate-900 space-y-4 pt-1"
+                    className="text-xs text-justify leading-relaxed font-serif text-black pt-1"
                     contentEditable={isEditable}
                     suppressContentEditableWarning={true}
                   >
@@ -1187,7 +1187,7 @@ export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
                   </div>
 
                   {/* Vendor Signature & Stamp section */}
-                  <div className="pt-10 space-y-2">
+                  <div className="pt-8 space-y-2">
                     <div className="relative text-xs font-bold text-left w-56 font-serif">
                       {vendorSignatureUrl ? (
                         <div className="absolute -top-12 left-2 w-32 h-12 select-none pointer-events-none">
@@ -1203,7 +1203,7 @@ export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
                       <div className="pt-1">
                         Signature [Vendor]
                       </div>
-                      <div className="text-slate-700 font-normal pt-4">
+                      <div className="text-black font-normal pt-4">
                         Stamp & Seal
                       </div>
                     </div>
@@ -1211,7 +1211,7 @@ export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
 
                   {/* Identity Details of Consumer */}
                   <div 
-                    className="pt-8 space-y-3 text-xs font-serif text-slate-900"
+                    className="pt-6 space-y-3 text-xs font-serif text-black"
                     contentEditable={isEditable}
                     suppressContentEditableWarning={true}
                   >
@@ -1230,8 +1230,8 @@ export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
                   </div>
 
                   {/* Box for Aadhar Card Xerox Upload */}
-                  <div className="pt-4 flex justify-center">
-                    <div className="w-[140mm] h-[85mm] border-2 border-black flex flex-col items-center justify-center p-4 text-center font-bold text-xs space-y-2 bg-slate-50/50 relative overflow-hidden">
+                  <div className="pt-6 flex justify-center">
+                    <div className="w-[145mm] h-[88mm] border-2 border-black flex flex-col items-center justify-center p-4 text-center font-bold text-xs space-y-2 bg-white relative overflow-hidden">
                       {aadharXeroxUrl ? (
                         <img
                           src={aadharXeroxUrl}
@@ -1240,8 +1240,8 @@ export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
                         />
                       ) : (
                         <>
-                          <p className="text-slate-900 tracking-wide font-serif">Upload Xerox of AADHAR CARD HERE</p>
-                          <p className="text-slate-800 text-[10px] tracking-wider font-serif">SHOULDBESELFATTESTEDBYCONSUMER</p>
+                          <p className="text-black tracking-wide font-serif font-bold text-xs">Upload Xerox of AADHAR CARD HERE</p>
+                          <p className="text-black text-[10px] tracking-wider font-serif font-bold mt-2">SHOULDBESELFATTESTEDBYCONSUMER</p>
                         </>
                       )}
                     </div>
