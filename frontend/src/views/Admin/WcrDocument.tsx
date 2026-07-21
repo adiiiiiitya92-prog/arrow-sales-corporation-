@@ -964,10 +964,10 @@ export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
               )}
 
               {/* PAGE 1: WCR Complete */}
-              <div className="dcr-page bg-white shadow-xl w-[210mm] h-[297mm] max-h-[297mm] p-[10mm] text-slate-800 flex flex-col justify-between font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-xs leading-normal overflow-hidden">
-                <div className="space-y-2">
+              <div className="dcr-page bg-white shadow-xl w-[210mm] min-h-[297mm] p-[6mm_8mm] text-slate-800 flex flex-col justify-between font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-xs leading-normal">
+                <div className="space-y-1">
                   <div 
-                    className="text-center font-bold text-sm underline uppercase font-serif pt-1 pb-1"
+                    className="text-center font-bold text-xs underline uppercase font-serif pt-0.5 pb-0.5"
                     contentEditable={isEditable}
                     suppressContentEditableWarning={true}
                   >
@@ -980,128 +980,128 @@ export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
                     suppressContentEditableWarning={true}
                     className="pt-0.5"
                   >
-                    <table className="w-full table-fixed border-collapse border border-black text-[10px] leading-snug font-serif">
+                    <table className="w-full table-fixed border-collapse border border-black text-[8.5px] leading-tight font-serif">
                       <thead>
                         <tr className="bg-slate-50 font-bold border-b border-black text-center">
-                          <th className="border-r border-black py-1 px-1 w-[8%]">Sr.No</th>
-                          <th className="border-r border-black py-1 px-1.5 w-[42%] text-left">Component</th>
-                          <th className="py-1 px-1.5 w-[50%] text-left">Observation</th>
+                          <th className="border-r border-black py-0.5 px-1 w-[8%]">Sr.No</th>
+                          <th className="border-r border-black py-0.5 px-1 w-[42%] text-left">Component</th>
+                          <th className="py-0.5 px-1 w-[50%] text-left">Observation</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1 text-center">1</td>
-                          <td className="border-r border-black py-1 px-1.5">Name</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(consumerName)}</td>
+                          <td className="border-r border-black py-0.5 px-1 text-center">1</td>
+                          <td className="border-r border-black py-0.5 px-1">Name</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(consumerName)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1 text-center">2</td>
-                          <td className="border-r border-black py-1 px-1.5">Consumer number</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(consumerNumber)}</td>
+                          <td className="border-r border-black py-0.5 px-1 text-center">2</td>
+                          <td className="border-r border-black py-0.5 px-1">Consumer number</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(consumerNumber)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1 text-center">3</td>
-                          <td className="border-r border-black py-1 px-1.5">Site/Location With Complete Address</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(address)}</td>
+                          <td className="border-r border-black py-0.5 px-1 text-center">3</td>
+                          <td className="border-r border-black py-0.5 px-1">Site/Location With Complete Address</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(address)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1 text-center">4</td>
-                          <td className="border-r border-black py-1 px-1.5">Category:Govt/Private Sector</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(category)}</td>
+                          <td className="border-r border-black py-0.5 px-1 text-center">4</td>
+                          <td className="border-r border-black py-0.5 px-1">Category:Govt/Private Sector</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(category)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1 text-center">5</td>
-                          <td className="border-r border-black py-1 px-1.5">Sanction number</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(sanctionNumber)}</td>
+                          <td className="border-r border-black py-0.5 px-1 text-center">5</td>
+                          <td className="border-r border-black py-0.5 px-1">Sanction number</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(sanctionNumber)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1 text-center" rowSpan={2}>6</td>
-                          <td className="border-r border-black py-1 px-1.5">Sanctioned Capacity of solar PV system (KW) Installed</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(sanctionedCapacity)}</td>
+                          <td className="border-r border-black py-0.5 px-1 text-center" rowSpan={2}>6</td>
+                          <td className="border-r border-black py-0.5 px-1">Sanctioned Capacity of solar PV system (KW) Installed</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(sanctionedCapacity)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5">Capacity of solar PV system (KW)</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(installedCapacity)}</td>
+                          <td className="border-r border-black py-0.5 px-1">Capacity of solar PV system (KW)</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(installedCapacity)}</td>
                         </tr>
                         
                         {/* Subheader: Module Specs */}
                         <tr className="border-b border-black bg-slate-50 font-bold">
-                          <td className="border-r border-black py-1 px-1 text-center" rowSpan={7}>7</td>
-                          <td className="py-1 px-1.5 text-center border-r border-black" colSpan={2}>Specification of the Modules</td>
+                          <td className="border-r border-black py-0.5 px-1 text-center" rowSpan={7}>7</td>
+                          <td className="py-0.5 px-1 text-center border-r border-black" colSpan={2}>Specification of the Modules</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">Make of Module</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(moduleMake)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">Make of Module</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(moduleMake)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">ALMM Model Number</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(almmModel)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">ALMM Model Number</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(almmModel)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">Wattage per module</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(moduleWattage)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">Wattage per module</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(moduleWattage)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">No.of Module</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(moduleCount)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">No.of Module</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(moduleCount)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">Total Capacity (KWP)</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(moduleCapacityKwp)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">Total Capacity (KWP)</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(moduleCapacityKwp)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">Warrantee Details (Product + Performance)</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(moduleWarrantee)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">Warrantee Details (Product + Performance)</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(moduleWarrantee)}</td>
                         </tr>
 
                         {/* Subheader: PCU */}
                         <tr className="border-b border-black bg-slate-50 font-bold">
-                          <td className="border-r border-black py-1 px-1 text-center" rowSpan={7}>8</td>
-                          <td className="py-1 px-1.5 text-center border-r border-black" colSpan={2}>PCU</td>
+                          <td className="border-r border-black py-0.5 px-1 text-center" rowSpan={7}>8</td>
+                          <td className="py-0.5 px-1 text-center border-r border-black" colSpan={2}>PCU</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">Make & Model number of Inverter</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(inverterMakeModel)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">Make & Model number of Inverter</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(inverterMakeModel)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">Rating</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(inverterRating)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">Rating</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(inverterRating)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">Type of charge controller/ MPPT</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(controllerType)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">Type of charge controller/ MPPT</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(controllerType)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">Capacity of Inverter</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(inverterCapacity)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">Capacity of Inverter</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(inverterCapacity)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">HPD</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(hpd)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">HPD</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(hpd)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">Year of manufacturing</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(inverterMfgYear)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">Year of manufacturing</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(inverterMfgYear)}</td>
                         </tr>
 
                         {/* Subheader: Earthing */}
                         <tr className="border-b border-black bg-slate-50 font-bold">
-                          <td className="border-r border-black py-1 px-1 text-center" rowSpan={4}>9</td>
-                          <td className="py-1 px-1.5 text-center border-r border-black" colSpan={2}>Earthing and Protections</td>
+                          <td className="border-r border-black py-0.5 px-1 text-center" rowSpan={4}>9</td>
+                          <td className="py-0.5 px-1 text-center border-r border-black" colSpan={2}>Earthing and Protections</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3">No of Separate Earthings with earth Resistance</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(earthingCount)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">No of Separate Earthings with earth Resistance</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(earthingCount)}</td>
                         </tr>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black py-1 px-1.5 pl-3 text-justify leading-snug">
+                          <td className="border-r border-black py-0.5 px-1 pl-2 text-justify leading-tight">
                             It is certified that the Earth Resistance measure in presence of Licensed Electrical Contractor/Supervisor and found in order i.e. &lt; 5 Ohms as per MNRE OM Dtd.07.06.24 for CFA Component.
                           </td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(earthCertifiedText)}</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(earthCertifiedText)}</td>
                         </tr>
                         <tr>
-                          <td className="border-r border-black py-1 px-1.5 pl-3">Lightening Arrester</td>
-                          <td className="py-1 px-1.5">{renderTableCellValue(lightningArrester)}</td>
+                          <td className="border-r border-black py-0.5 px-1 pl-2">Lightening Arrester</td>
+                          <td className="py-0.5 px-1">{renderTableCellValue(lightningArrester)}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1109,21 +1109,21 @@ export const WcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
 
                   {/* Justified Paragraph declarations below table matching screenshot */}
                   <div 
-                    className="space-y-5 pt-5 pb-3 text-[11px] text-justify leading-loose font-serif text-slate-900 w-full"
+                    className="space-y-2 pt-2 pb-1 text-[9.5px] text-justify leading-snug font-serif text-slate-900 w-full"
                     contentEditable={isEditable}
                     suppressContentEditableWarning={true}
                   >
-                    <p className="text-justify w-full leading-loose">
-                      We {renderUnderlinedField(companyName, '...........................................................................', 'min-w-[160px]', 'text-center')} [Vendor] & {renderUnderlinedField(consumerName, '...........................................................................', 'min-w-[160px]', 'text-center')} [Consumer] bearing Consumer Number {renderUnderlinedField(consumerNumber, '..................................................', 'min-w-[130px]', 'text-center')} Ensured structural stability of installed solar power plant and obtained requisite permissions from the concerned authority. If in future, by virtue of any means due to collapsing or damage to installed solar power plant, MSEDCL will not be held responsible for any loss to property or human life, if any.
+                    <p className="text-justify w-full leading-snug">
+                      We {renderUnderlinedField(companyName, '...........................................................................', 'min-w-[140px]', 'text-center')} [Vendor] & {renderUnderlinedField(consumerName, '...........................................................................', 'min-w-[140px]', 'text-center')} [Consumer] bearing Consumer Number {renderUnderlinedField(consumerNumber, '..................................................', 'min-w-[120px]', 'text-center')} Ensured structural stability of installed solar power plant and obtained requisite permissions from the concerned authority. If in future, by virtue of any means due to collapsing or damage to installed solar power plant, MSEDCL will not be held responsible for any loss to property or human life, if any.
                     </p>
-                    <p className="text-justify w-full leading-loose">
+                    <p className="text-justify w-full leading-snug">
                       This is to Certified above Installed Solar PV System is working properly with electrical safety & Islanding switch in case of any presence of backup inverter an arrangement should be made in such way the backup inverter supply should never be synchronized with solar inverter to avoid any electrical accident due to back feeding. We will be held responsible for non-working of islanding mechanism and back feed to the de-energized grid.
                     </p>
                   </div>
                 </div>
 
                 {/* Signatures section */}
-                <div className="pt-5 pb-1 flex justify-between items-end">
+                <div className="pt-2 pb-1 flex justify-between items-end">
                   {/* Left: Vendor Signature */}
                   <div className="relative text-[10.5px] font-bold text-left w-48 font-serif">
                     {vendorSignatureUrl ? (
