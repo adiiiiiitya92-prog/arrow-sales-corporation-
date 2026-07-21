@@ -201,8 +201,8 @@ ${stylesheets}
     <div
       className={
         isEmbedded
-          ? 'min-h-[750px] bg-slate-50 flex flex-col border border-slate-200 rounded-xl overflow-hidden shadow-xs relative'
-          : 'min-h-screen bg-slate-50 flex flex-col -mx-4 -my-6 md:-mx-8 md:-my-8 relative'
+          ? 'h-[680px] max-h-[85vh] bg-slate-50 flex flex-col border border-slate-200 rounded-xl overflow-hidden shadow-xs relative'
+          : 'h-[calc(100vh-80px)] bg-slate-50 flex flex-col -mx-4 -my-6 md:-mx-8 md:-my-8 relative overflow-hidden'
       }
     >
       <style
