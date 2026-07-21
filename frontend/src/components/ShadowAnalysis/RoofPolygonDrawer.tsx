@@ -262,8 +262,9 @@ export const RoofPolygonDrawer: React.FC<RoofPolygonDrawerProps> = ({
               type="number"
               min="0"
               max="60"
-              value={panelTiltDeg}
-              onChange={(e) => setPanelTiltDeg?.(parseInt(e.target.value) || 0)}
+              value={panelTiltDeg || ''}
+              onChange={(e) => setPanelTiltDeg?.(e.target.value === '' ? 0 : parseInt(e.target.value))}
+              placeholder="e.g. 15"
               className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
             />
           </div>
@@ -273,8 +274,9 @@ export const RoofPolygonDrawer: React.FC<RoofPolygonDrawerProps> = ({
               type="number"
               min="0"
               max="360"
-              value={panelAzimuthDeg}
-              onChange={(e) => setPanelAzimuthDeg?.(parseInt(e.target.value) || 180)}
+              value={panelAzimuthDeg || ''}
+              onChange={(e) => setPanelAzimuthDeg?.(e.target.value === '' ? 0 : parseInt(e.target.value))}
+              placeholder="e.g. 180"
               className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
             />
           </div>
@@ -297,8 +299,9 @@ export const RoofPolygonDrawer: React.FC<RoofPolygonDrawerProps> = ({
             type="number"
             step="0.05"
             min="0"
-            value={pitchDistance}
-            onChange={(e) => setPitchDistance?.(parseFloat(e.target.value) || 0)}
+            value={pitchDistance || ''}
+            onChange={(e) => setPitchDistance?.(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+            placeholder="e.g. 1.2"
             className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
           />
         </div>

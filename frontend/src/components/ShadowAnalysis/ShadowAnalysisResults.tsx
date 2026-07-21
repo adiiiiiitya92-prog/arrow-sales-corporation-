@@ -338,8 +338,9 @@ _Generated using Solar CRM Shadow & Panel Layout Fitter._`
                 step="1"
                 min="0"
                 max="60"
-                value={panelSpec.tiltDeg || 0}
-                onChange={(e) => handleSpecChange('tiltDeg', parseInt(e.target.value) || 0)}
+                value={panelSpec.tiltDeg || ''}
+                onChange={(e) => handleSpecChange('tiltDeg', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                placeholder="e.g. 15"
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
               />
             </div>
@@ -350,8 +351,9 @@ _Generated using Solar CRM Shadow & Panel Layout Fitter._`
                 step="5"
                 min="0"
                 max="360"
-                value={panelSpec.azimuthDeg ?? 180}
-                onChange={(e) => handleSpecChange('azimuthDeg', parseInt(e.target.value) || 180)}
+                value={panelSpec.azimuthDeg || ''}
+                onChange={(e) => handleSpecChange('azimuthDeg', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                placeholder="e.g. 180"
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
               />
             </div>
@@ -361,8 +363,9 @@ _Generated using Solar CRM Shadow & Panel Layout Fitter._`
                 type="number"
                 step="0.1"
                 min="0"
-                value={layoutConfig.pitchDistance || 0}
-                onChange={(e) => handleConfigChange('pitchDistance', parseFloat(e.target.value) || 0)}
+                value={layoutConfig.pitchDistance || ''}
+                onChange={(e) => handleConfigChange('pitchDistance', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                placeholder="e.g. 1.2"
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold text-slate-700 outline-none"
               />
             </div>
