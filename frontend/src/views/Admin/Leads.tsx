@@ -1196,46 +1196,55 @@ export const Leads: React.FC = () => {
                     <p className="text-[11px] text-slate-450 font-semibold mt-0.5">Manage and print Domestic Content Requirement (DCR) and Work Completion Reports (WCR) for this lead.</p>
                   </div>
                   
-                  {/* Nested Tab Selection Buttons */}
-                  <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 self-start select-none gap-1">
-                    <button
-                      onClick={() => setDocSubTab('dcr')}
-                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                        docSubTab === 'dcr' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-650 hover:bg-slate-200'
-                      }`}
-                    >
-                      DCR Certificate
-                    </button>
-                    <button
-                      onClick={() => setDocSubTab('wcr')}
-                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                        docSubTab === 'wcr' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-650 hover:bg-slate-200'
-                      }`}
-                    >
-                      WCR Report
-                    </button>
-                    <button
-                      onClick={() => setDocSubTab('model_agreement')}
-                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                        docSubTab === 'model_agreement' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-650 hover:bg-slate-200'
-                      }`}
-                    >
-                      Model Agreement
-                    </button>
-                    <button
-                      onClick={() => setDocSubTab('annexure_proforma')}
-                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                        docSubTab === 'annexure_proforma' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-650 hover:bg-slate-200'
-                      }`}
-                    >
-                      Annexure Proforma
-                    </button>
-                  </div>
+                  {/* Nested Tab Selection Buttons - Admin / Super Admin gets all document forms; Field Employee gets WCR only */}
+                  {currentRole !== 'field_employee' ? (
+                    <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 self-start select-none gap-1">
+                      <button
+                        onClick={() => setDocSubTab('dcr')}
+                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                          docSubTab === 'dcr' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-650 hover:bg-slate-200'
+                        }`}
+                      >
+                        DCR Certificate
+                      </button>
+                      <button
+                        onClick={() => setDocSubTab('wcr')}
+                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                          docSubTab === 'wcr' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-650 hover:bg-slate-200'
+                        }`}
+                      >
+                        WCR Report
+                      </button>
+                      <button
+                        onClick={() => setDocSubTab('model_agreement')}
+                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                          docSubTab === 'model_agreement' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-650 hover:bg-slate-200'
+                        }`}
+                      >
+                        Model Agreement
+                      </button>
+                      <button
+                        onClick={() => setDocSubTab('annexure_proforma')}
+                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                          docSubTab === 'annexure_proforma' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-650 hover:bg-slate-200'
+                        }`}
+                      >
+                        Annexure Proforma
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-lg text-xs font-bold">
+                      <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>WCR Report Portal</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Render Selected Document inside a styled viewport container */}
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-                  {docSubTab === 'dcr' ? (
+                  {currentRole === 'field_employee' ? (
+                    <WcrDocument defaultLeadId={selectedLead?.id} isEmbedded={true} />
+                  ) : docSubTab === 'dcr' ? (
                     <DcrDocument defaultLeadId={selectedLead?.id} isEmbedded={true} />
                   ) : docSubTab === 'wcr' ? (
                     <WcrDocument defaultLeadId={selectedLead?.id} isEmbedded={true} />
