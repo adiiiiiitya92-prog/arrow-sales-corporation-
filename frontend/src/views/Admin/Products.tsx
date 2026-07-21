@@ -13,8 +13,8 @@ export const Products: React.FC = () => {
   const [category, setCategory] = useState<Product['category']>('solar_panel');
   const [rate, setRate] = useState(0);
   const [description, setDescription] = useState('');
-  const [stockQuantity, setStockQuantity] = useState(0);
-  const [minStockThreshold, setMinStockThreshold] = useState(5);
+  const [stockQuantity, setStockQuantity] = useState<number | ''>('');
+  const [minStockThreshold, setMinStockThreshold] = useState<number | ''>('');
 
   const loadProducts = async () => {
     const list = await productService.getProducts();
@@ -49,8 +49,8 @@ export const Products: React.FC = () => {
       setCategory('solar_panel');
       setRate(0);
       setDescription('');
-      setStockQuantity(0);
-      setMinStockThreshold(5);
+      setStockQuantity('');
+      setMinStockThreshold('');
       setShowAddModal(false);
       await loadProducts();
     } catch (err) {
@@ -244,10 +244,9 @@ export const Products: React.FC = () => {
                   <label className="block text-slate-500 mb-1">Stock Quantity (In Hand)</label>
                   <input
                     type="number"
-                    required
                     min={0}
                     value={stockQuantity}
-                    onChange={(e) => setStockQuantity(Number(e.target.value))}
+                    onChange={(e) => setStockQuantity(e.target.value === '' ? '' : Number(e.target.value))}
                     placeholder="e.g. 15"
                     className="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:outline-none"
                   />
@@ -257,10 +256,9 @@ export const Products: React.FC = () => {
                   <label className="block text-slate-500 mb-1">Minimum Alert Threshold</label>
                   <input
                     type="number"
-                    required
                     min={0}
                     value={minStockThreshold}
-                    onChange={(e) => setMinStockThreshold(Number(e.target.value))}
+                    onChange={(e) => setMinStockThreshold(e.target.value === '' ? '' : Number(e.target.value))}
                     placeholder="e.g. 5"
                     className="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 focus:outline-none"
                   />
