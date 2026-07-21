@@ -693,8 +693,8 @@ export const Leads: React.FC = () => {
               Timeline Stepper
             </button>
             
-            {/* Quotations builder available for Employee & Admin */}
-            {['admin', 'field_employee'].includes(currentRole) && (
+            {/* Quotations builder available for Employee, Admin & Super Admin */}
+            {['super_admin', 'admin', 'field_employee'].includes(currentRole) && (
               <button
                 onClick={() => setActiveTab('quotation')}
                 className={`py-3 px-4 border-b-2 cursor-pointer transition-all whitespace-nowrap ${
@@ -706,7 +706,7 @@ export const Leads: React.FC = () => {
             )}
 
             {/* Confirm booking receipt */}
-            {['admin', 'field_employee'].includes(currentRole) && (
+            {['super_admin', 'admin', 'field_employee'].includes(currentRole) && (
               <button
                 onClick={() => setActiveTab('order')}
                 className={`py-3 px-4 border-b-2 cursor-pointer transition-all whitespace-nowrap ${
@@ -1102,7 +1102,7 @@ export const Leads: React.FC = () => {
                 </div>
 
                 {/* Capture photo input form */}
-                {['admin', 'field_employee'].includes(currentRole) && (
+                {['super_admin', 'admin', 'field_employee'].includes(currentRole) && (
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4 max-w-lg">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -1399,7 +1399,7 @@ export const Leads: React.FC = () => {
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Lead Management</h1>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Monitor leads, assign staff, and track progress.</p>
             </div>
-            {['admin', 'field_employee'].includes(currentRole) && (
+            {['super_admin', 'admin', 'field_employee'].includes(currentRole) && (
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer transition-all self-start sm:self-auto"
