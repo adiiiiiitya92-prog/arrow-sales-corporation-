@@ -212,6 +212,20 @@ ${stylesheets}
           font-family: "Times New Roman", Times, Georgia, serif !important;
           print-color-adjust: exact !important;
           -webkit-print-color-adjust: exact !important;
+        @media screen and (max-width: 640px) {
+          .annexure-proforma-page {
+            transform: scale(0.44) !important;
+            transform-origin: top center !important;
+            margin-bottom: -155mm !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+          }
+        }
+        @media screen and (min-width: 641px) and (max-width: 1024px) {
+          .annexure-proforma-page {
+            transform: scale(0.70) !important;
+            transform-origin: top center !important;
+            margin-bottom: -80mm !important;
+          }
         }
       `
         }}

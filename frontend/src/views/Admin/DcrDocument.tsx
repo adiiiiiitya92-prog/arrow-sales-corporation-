@@ -343,6 +343,22 @@ export const DcrDocument: React.FC<{ defaultLeadId?: string; isEmbedded?: boolea
             page-break-inside: avoid !important;
           }
         }
+
+        @media screen and (max-width: 640px) {
+          .dcr-page {
+            transform: scale(0.44) !important;
+            transform-origin: top center !important;
+            margin-bottom: -155mm !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+          }
+        }
+        @media screen and (min-width: 641px) and (max-width: 1024px) {
+          .dcr-page {
+            transform: scale(0.70) !important;
+            transform-origin: top center !important;
+            margin-bottom: -80mm !important;
+          }
+        }
       `}} />
 
       {/* Header bar */}
