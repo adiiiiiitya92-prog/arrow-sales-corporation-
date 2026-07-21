@@ -327,7 +327,7 @@ ${stylesheets}
       `}} />
 
       {/* Top Header Bar with Print Button */}
-      <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shrink-0 select-none dcr-header-bar print:hidden">
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shrink-0 select-none dcr-header-bar print:hidden shadow-xs">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
             <FileText className="w-5 h-5" />
@@ -351,7 +351,7 @@ ${stylesheets}
       </div>
 
       {/* Mobile Segmented Switch (Form Controls vs Document Preview) */}
-      <div className="flex lg:hidden bg-slate-100 p-1.5 border-b border-slate-200 justify-center gap-2 select-none shrink-0 print:hidden">
+      <div className="sticky top-0 z-30 flex lg:hidden bg-white/95 backdrop-blur-md p-1.5 border-b border-slate-200 justify-center gap-2 select-none shrink-0 print:hidden shadow-xs">
         <button
           type="button"
           onClick={() => setMobileTab('form')}
@@ -379,7 +379,7 @@ ${stylesheets}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
         
         {/* Left Side: Form Controls */}
-        <div className={`bg-white border-r border-slate-200 overflow-y-auto space-y-4 action-sidebar shrink-0 select-none transition-all duration-300 ${
+        <div className={`bg-white border-r border-slate-200 overflow-y-auto space-y-4 action-sidebar shrink-0 select-none transition-all duration-300 lg:sticky lg:top-0 lg:max-h-[calc(100vh-60px)] ${
           mobileTab === 'form' ? 'w-full block' : 'hidden lg:block'
         } ${
           isSidebarCollapsed ? 'lg:w-0 lg:p-0 lg:border-r-0 lg:opacity-0 pointer-events-none' : 'w-full lg:w-96 p-4 opacity-100'
