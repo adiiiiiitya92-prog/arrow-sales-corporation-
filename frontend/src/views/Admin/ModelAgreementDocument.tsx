@@ -51,6 +51,7 @@ export const ModelAgreementDocument: React.FC<{ defaultLeadId?: string; isEmbedd
   const [expandedSection, setExpandedSection] = useState<string>('lead');
   const [isEditable, setIsEditable] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'form' | 'preview'>('form');
 
   useEffect(() => {
     const fetchLeads = async () => {
@@ -333,12 +334,39 @@ ${stylesheets}
         </div>
       </div>
 
+      {/* Mobile Segmented Switch (Form Controls vs Document Preview) */}
+      <div className="flex lg:hidden bg-slate-100 p-1.5 border-b border-slate-200 justify-center gap-2 select-none shrink-0 print:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileTab('form')}
+          className={`flex-1 py-2 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
+            mobileTab === 'form' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <Edit3 className="w-3.5 h-3.5" />
+          <span>📝 Form Controls</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMobileTab('preview')}
+          className={`flex-1 py-2 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
+            mobileTab === 'preview' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-650 hover:bg-slate-200'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span>📄 Document Preview</span>
+        </button>
+      </div>
+
       {/* Main split viewport */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
         
         {/* Left Side: Form Controls */}
         <div className={`bg-white border-r border-slate-200 overflow-y-auto space-y-4 action-sidebar shrink-0 select-none transition-all duration-300 ${
-          isSidebarCollapsed ? 'w-0 p-0 border-r-0 opacity-0 pointer-events-none' : 'w-full lg:w-96 p-4 opacity-100'
+          mobileTab === 'form' ? 'w-full block' : 'hidden lg:block'
+        } ${
+          isSidebarCollapsed ? 'lg:w-0 lg:p-0 lg:border-r-0 lg:opacity-0 pointer-events-none' : 'w-full lg:w-96 p-4 opacity-100'
         }`}>
           
           {/* Custom Edit Toggle */}
@@ -679,7 +707,9 @@ ${stylesheets}
         </div>
 
         {/* Right Side: Model Agreement A4 Preview */}
-        <div className="flex-1 overflow-y-auto bg-slate-100 p-4 md:p-8 flex flex-col items-center space-y-6 main-content-wrapper select-none relative">
+        <div className={`flex-1 overflow-y-auto overflow-x-auto bg-slate-100 p-2 sm:p-4 md:p-8 flex flex-col items-center space-y-6 main-content-wrapper select-none relative max-w-full ${
+          mobileTab === 'preview' ? 'block w-full' : 'hidden lg:flex'
+        }`}>
           {isSidebarCollapsed && (
             <button
               type="button"

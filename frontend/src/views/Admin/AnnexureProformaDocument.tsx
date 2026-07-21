@@ -53,6 +53,7 @@ export const AnnexureProformaDocument: React.FC<{ defaultLeadId?: string; isEmbe
   // UI state
   const [expandedSection, setExpandedSection] = useState<string>('consumer');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'form' | 'preview'>('form');
 
   useEffect(() => {
     const fetchLeads = async () => {
@@ -257,12 +258,39 @@ ${stylesheets}
         </div>
       </div>
 
+      {/* Mobile Segmented Switch (Form Controls vs Document Preview) */}
+      <div className="flex lg:hidden bg-slate-100 p-1.5 border-b border-slate-200 justify-center gap-2 select-none shrink-0 print:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileTab('form')}
+          className={`flex-1 py-2 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
+            mobileTab === 'form' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span>📝 Form Controls</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMobileTab('preview')}
+          className={`flex-1 py-2 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 ${
+            mobileTab === 'preview' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-650 hover:bg-slate-200'
+          }`}
+        >
+          <FileCheck className="w-3.5 h-3.5" />
+          <span>📄 Document Preview</span>
+        </button>
+      </div>
+
       {/* Main Content Viewport */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Left Sidebar: Form Controls */}
         <div
           className={`bg-white border-r border-slate-200 flex flex-col shrink-0 transition-all duration-300 select-none print:hidden z-20 ${
-            isSidebarCollapsed ? 'w-0 overflow-hidden border-r-0' : 'w-80 md:w-96'
+            mobileTab === 'form' ? 'w-full block' : 'hidden lg:block'
+          } ${
+            isSidebarCollapsed ? 'lg:w-0 lg:overflow-hidden lg:border-r-0' : 'w-full lg:w-96'
           }`}
         >
           <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
@@ -630,7 +658,9 @@ ${stylesheets}
         </div>
 
         {/* Right Side: A4 Document Preview */}
-        <div className="flex-1 overflow-y-auto bg-slate-100 p-4 md:p-8 flex flex-col items-center space-y-6 select-none relative">
+        <div className={`flex-1 overflow-y-auto overflow-x-auto bg-slate-100 p-2 sm:p-4 md:p-8 flex flex-col items-center space-y-6 select-none relative max-w-full ${
+          mobileTab === 'preview' ? 'block w-full' : 'hidden lg:flex'
+        }`}>
           {isSidebarCollapsed && (
             <button
               type="button"
