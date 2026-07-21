@@ -276,8 +276,8 @@ export const pdfService = {
   },
 
   /**
-   * Generates a modern, ultra-professional Materials Delivery Challan & Dispatch Note
-   * featuring the official Arrow Sales Corporation logo, transport details, and signature seals.
+   * Generates a clean, modern Materials Delivery Challan & Dispatch Note
+   * featuring a crisp WHITE header with official logo, compact dynamic spacing, and signature seals.
    */
   async generateChallanPDF(ch: any): Promise<Blob> {
     const doc = new jsPDF({
@@ -288,138 +288,136 @@ export const pdfService = {
 
     const logoData = await getLogoBase64();
 
-    // Theme palette (Navy Blue & Emerald accent)
-    const navyDark = [15, 23, 42];
-    const emerald = [16, 185, 129];
+    // Theme palette (Crisp White Header, Dark Slate Typography, Emerald Accents)
+    const slateDark = [15, 23, 42];
     const slateGray = [71, 85, 105];
+    const emerald = [16, 185, 129];
 
-    // Top Header Banner
-    doc.setFillColor(navyDark[0], navyDark[1], navyDark[2]);
+    // ===================================
+    // HEADER: CLEAN WHITE BACKGROUND & LOGO
+    // ===================================
+    doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, 210, 34, 'F');
-
-    // Accent line below top header
-    doc.setFillColor(emerald[0], emerald[1], emerald[2]);
-    doc.rect(0, 34, 210, 2, 'F');
 
     // Company Logo / Title Left Side
     if (logoData) {
-      doc.addImage(logoData, 'PNG', 14, 5.5, 58, 16.5);
+      doc.addImage(logoData, 'PNG', 14, 6, 60, 17);
     } else {
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(18);
-      doc.text('ARROW SALES CORPORATION', 14, 17);
+      doc.text('ARROW SALES CORPORATION', 14, 18);
     }
 
-    doc.setTextColor(203, 213, 225);
-    doc.setFontSize(8.5);
+    doc.setTextColor(emerald[0], emerald[1], emerald[2]);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.text('SOLAR POWER SYSTEMS • MATERIAL DISPATCH NOTE', 14, 28);
 
-    // Document Header Right Side
-    doc.setTextColor(255, 255, 255);
+    // Document Header Right Side (Clean Box)
+    doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(15);
-    doc.text('DELIVERY CHALLAN', 196, 15, { align: 'right' });
+    doc.setFontSize(14);
+    doc.text('DELIVERY CHALLAN', 196, 14, { align: 'right' });
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(52, 211, 153); // Emerald light text
-    doc.text(`NO: ${ch.challanNumber}`, 196, 21, { align: 'right' });
+    doc.setTextColor(16, 185, 129); // Emerald text
+    doc.text(`CHALLAN NO: ${ch.challanNumber}`, 196, 20, { align: 'right' });
 
-    doc.setFontSize(8.5);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(226, 232, 240);
-    doc.text(`Date: ${dayjs(ch.createdAt || new Date()).format('DD MMMM YYYY, hh:mm A')}`, 196, 27, { align: 'right' });
+    doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+    doc.text(`Date: ${dayjs(ch.createdAt || new Date()).format('DD MMM YYYY, hh:mm A')}`, 196, 26, { align: 'right' });
 
-    // Company Address / GSTIN Footer Banner
-    doc.setFontSize(7.5);
-    doc.setTextColor(148, 163, 184);
+    // Clean Subtle Header Divider Line
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(14, 32, 196, 32);
 
     // ===================================
-    // SECTION 1: DELIVER TO & TRANSPORT
+    // SECTION 1: CUSTOMER & TRANSPORT DETAILS (COMPACT SPACING)
     // ===================================
+    const sec1Y = 36;
 
     // Box 1: Deliver To (Customer)
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(14, 42, 90, 38, 3, 3, 'F');
+    doc.roundedRect(14, sec1Y, 90, 32, 2, 2, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(14, 42, 90, 38, 3, 3, 'D');
+    doc.roundedRect(14, sec1Y, 90, 32, 2, 2, 'D');
 
-    doc.setTextColor(navyDark[0], navyDark[1], navyDark[2]);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    doc.text('DELIVER TO (CUSTOMER DETAILS)', 19, 49);
-
-    doc.setDrawColor(203, 213, 225);
-    doc.line(19, 51, 99, 51);
-
+    doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.text(`Client Name: ${ch.leadName}`, 19, 57);
+    doc.text('DELIVER TO (CUSTOMER DETAILS)', 18, sec1Y + 6);
+
+    doc.setDrawColor(203, 213, 225);
+    doc.line(18, sec1Y + 8, 98, sec1Y + 8);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text(`Client Name: ${ch.leadName}`, 18, sec1Y + 14);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
+    doc.setFontSize(8);
     doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
-    doc.text(`Project Ref ID: ${ch.leadId}`, 19, 63);
-    doc.text(`Dispatch Status: Inventory Items Outward`, 19, 69);
-    doc.text(`Destination: Client Site Location`, 19, 75);
+    doc.text(`Project Ref ID: ${ch.leadId}`, 18, sec1Y + 19.5);
+    doc.text(`Destination: Client Site Address`, 18, sec1Y + 25);
 
     // Box 2: Transport & Vehicle Info
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(106, 42, 90, 38, 3, 3, 'F');
+    doc.roundedRect(106, sec1Y, 90, 32, 2, 2, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(106, 42, 90, 38, 3, 3, 'D');
+    doc.roundedRect(106, sec1Y, 90, 32, 2, 2, 'D');
 
-    doc.setTextColor(navyDark[0], navyDark[1], navyDark[2]);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    doc.text('TRANSPORT & CARRIER DETAILS', 111, 49);
-
-    doc.setDrawColor(203, 213, 225);
-    doc.line(111, 51, 191, 51);
-
+    doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.text(`Vehicle Number: ${ch.vehicleNumber}`, 111, 57);
+    doc.text('TRANSPORT & CARRIER DETAILS', 110, sec1Y + 6);
+
+    doc.setDrawColor(203, 213, 225);
+    doc.line(110, sec1Y + 8, 190, sec1Y + 8);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text(`Vehicle Number: ${ch.vehicleNumber}`, 110, sec1Y + 14);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
+    doc.setFontSize(8);
     doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
-    doc.text(`Driver Name: ${ch.driverName}`, 111, 63);
-    doc.text(`Driver Contact: +91 ${ch.driverPhone}`, 111, 69);
-    doc.text(`Dispatch Officer: ${ch.employeeName}`, 111, 75);
+    doc.text(`Driver Name: ${ch.driverName} (+91 ${ch.driverPhone})`, 110, sec1Y + 19.5);
+    doc.text(`Dispatch Representative: ${ch.employeeName}`, 110, sec1Y + 25);
 
-    // Notes banner if notes exist
-    let startY = 86;
+    // Dynamic Y calculation based on notes presence
+    let currentY = sec1Y + 36;
     if (ch.notes) {
-      doc.setFillColor(254, 243, 199); // Light amber
-      doc.roundedRect(14, 84, 182, 9, 2, 2, 'F');
+      doc.setFillColor(254, 243, 199); // Light amber banner
+      doc.roundedRect(14, currentY, 182, 8, 2, 2, 'F');
       doc.setDrawColor(251, 191, 36);
-      doc.roundedRect(14, 84, 182, 9, 2, 2, 'D');
+      doc.roundedRect(14, currentY, 182, 8, 2, 2, 'D');
 
       doc.setTextColor(146, 64, 14);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
-      doc.text(`SPECIAL DISPATCH NOTES: ${ch.notes}`, 18, 90);
-      startY = 98;
+      doc.text(`DISPATCH NOTES: ${ch.notes}`, 18, currentY + 5.5);
+      currentY += 12;
     }
 
     // ===================================
-    // SECTION 2: DISPATCHED MATERIALS TABLE
+    // SECTION 2: DISPATCHED MATERIALS TABLE (DYNAMIC NATURAL SPACING)
     // ===================================
-    doc.setFillColor(navyDark[0], navyDark[1], navyDark[2]);
-    doc.rect(14, startY, 182, 8, 'F');
+    doc.setFillColor(slateDark[0], slateDark[1], slateDark[2]);
+    doc.rect(14, currentY, 182, 7.5, 'F');
 
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
-    doc.text('S.NO', 18, startY + 5.5);
-    doc.text('ITEM / COMPONENT DESCRIPTION', 34, startY + 5.5);
-    doc.text('CATEGORY', 140, startY + 5.5);
-    doc.text('DISPATCHED QTY', 192, startY + 5.5, { align: 'right' });
+    doc.text('S.NO', 18, currentY + 5);
+    doc.text('ITEM / COMPONENT DESCRIPTION', 34, currentY + 5);
+    doc.text('CATEGORY', 140, currentY + 5);
+    doc.text('DISPATCHED QTY', 192, currentY + 5, { align: 'right' });
 
-    let yPos = startY + 14;
+    currentY += 12;
     let totalItemsCount = 0;
 
     doc.setFont('helvetica', 'normal');
@@ -431,47 +429,47 @@ export const pdfService = {
 
       if (idx % 2 === 1) {
         doc.setFillColor(248, 250, 252);
-        doc.rect(14, yPos - 5.5, 182, 8, 'F');
+        doc.rect(14, currentY - 4.5, 182, 7.5, 'F');
       }
 
-      doc.setTextColor(navyDark[0], navyDark[1], navyDark[2]);
-      doc.text(`${idx + 1}`, 18, yPos);
+      doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
+      doc.text(`${idx + 1}`, 18, currentY);
 
       const prodName = item.productName.length > 55 ? item.productName.substring(0, 52) + '...' : item.productName;
-      doc.text(prodName, 34, yPos);
+      doc.text(prodName, 34, currentY);
 
       doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
-      doc.text(item.category ? item.category.replace('_', ' ').toUpperCase() : 'SOLAR PART', 140, yPos);
+      doc.text(item.category ? item.category.replace('_', ' ').toUpperCase() : 'SOLAR PART', 140, currentY);
 
-      doc.setTextColor(navyDark[0], navyDark[1], navyDark[2]);
+      doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
       doc.setFont('helvetica', 'bold');
-      doc.text(`${item.qty} UNITS`, 192, yPos, { align: 'right' });
+      doc.text(`${item.qty} UNITS`, 192, currentY, { align: 'right' });
       doc.setFont('helvetica', 'normal');
 
       doc.setDrawColor(241, 245, 249);
-      doc.line(14, yPos + 2.5, 196, yPos + 2.5);
-      yPos += 8.5;
+      doc.line(14, currentY + 2.5, 196, currentY + 2.5);
+      currentY += 7.5;
     });
 
     // Summary Total Row
     doc.setFillColor(241, 245, 249);
-    doc.rect(14, yPos - 2, 182, 8, 'F');
+    doc.rect(14, currentY - 1.5, 182, 7.5, 'F');
     doc.setDrawColor(203, 213, 225);
-    doc.rect(14, yPos - 2, 182, 8, 'D');
+    doc.rect(14, currentY - 1.5, 182, 7.5, 'D');
 
-    doc.setTextColor(navyDark[0], navyDark[1], navyDark[2]);
+    doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('TOTAL DISPATCHED UNITS / QUANTITY:', 110, yPos + 3.5);
+    doc.setFontSize(8.5);
+    doc.text('TOTAL DISPATCHED UNITS / QUANTITY:', 110, currentY + 3.5);
     doc.setTextColor(16, 185, 129);
-    doc.text(`${totalItemsCount} UNITS`, 192, yPos + 3.5, { align: 'right' });
+    doc.text(`${totalItemsCount} UNITS`, 192, currentY + 3.5, { align: 'right' });
 
     // ===================================
-    // SECTION 3: DECLARATION & SIGNATURE SEALS
+    // SECTION 3: DECLARATION & SIGNATURE SEALS (FITS NATURAL SPACING WITHOUT EMPTY GAPS)
     // ===================================
-    let footerY = Math.max(yPos + 18, 230);
+    const footerY = currentY + 14;
 
-    doc.setTextColor(navyDark[0], navyDark[1], navyDark[2]);
+    doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.text('RECEIPT ACKNOWLEDGEMENT & UNDERTAKING:', 14, footerY);
@@ -481,19 +479,19 @@ export const pdfService = {
     doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
     doc.text('We hereby acknowledge receipt of the above listed solar equipment and materials in sound condition & exact specified quantity.', 14, footerY + 4.5);
 
-    // 3 Signature Columns
-    const signY = footerY + 26;
+    // 3 Signature Columns (positioned right below acknowledgement)
+    const signY = footerY + 22;
 
     // Signature 1: Driver / Carrier
     doc.setDrawColor(203, 213, 225);
     doc.line(14, signY - 4, 64, signY - 4);
-    doc.setTextColor(navyDark[0], navyDark[1], navyDark[2]);
+    doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.text("DRIVER / CARRIER SIGNATURE", 14, signY);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
-    doc.text(`Name: ${ch.driverName}`, 14, signY + 4);
+    doc.text(`Driver: ${ch.driverName}`, 14, signY + 3.5);
 
     // Signature 2: Receiver / Customer
     doc.line(80, signY - 4, 130, signY - 4);
@@ -502,7 +500,7 @@ export const pdfService = {
     doc.text("CUSTOMER RECEIVER STAMP & SIGN", 80, signY);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
-    doc.text(`Name: ${ch.leadName}`, 80, signY + 4);
+    doc.text(`Customer: ${ch.leadName}`, 80, signY + 3.5);
 
     // Signature 3: Authorized Signatory
     doc.line(146, signY - 4, 196, signY - 4);
@@ -511,7 +509,7 @@ export const pdfService = {
     doc.text("FOR ARROW SALES CORPORATION", 146, signY);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
-    doc.text("Authorized Dispatch Officer", 146, signY + 4);
+    doc.text("Authorized Dispatch Officer", 146, signY + 3.5);
 
     return doc.output('blob');
   }
