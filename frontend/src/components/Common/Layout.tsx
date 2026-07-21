@@ -77,18 +77,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       icon: Sun
     },
     {
-      name: 'DCR Undertaking',
-      path: '/dcr-document',
-      roles: ['super_admin', 'admin'],
-      icon: FileText
-    },
-    {
-      name: 'WCR Report',
-      path: '/wcr-document',
-      roles: ['super_admin', 'admin'],
-      icon: FileText
-    },
-    {
       name: 'Employee Panel',
       path: '/employees',
       roles: ['super_admin', 'admin'],
