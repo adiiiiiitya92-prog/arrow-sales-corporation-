@@ -212,6 +212,8 @@ ${stylesheets}
           font-family: "Times New Roman", Times, Georgia, serif !important;
           print-color-adjust: exact !important;
           -webkit-print-color-adjust: exact !important;
+        }
+
         @media screen and (max-width: 640px) {
           .annexure-proforma-page {
             transform: scale(0.44) !important;
@@ -691,7 +693,7 @@ ${stylesheets}
 
           <div className="annexure-proforma-print-container flex flex-col items-center space-y-6 print:space-y-0 w-full">
             {/* PAGE 1: Annexure-I & Proforma-A Body Text */}
-            <div className="annexure-proforma-page bg-white shadow-xl w-[210mm] h-[297mm] max-h-[297mm] p-[12mm_15mm] text-slate-900 flex flex-col justify-start font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-[10pt] leading-[1.3] text-justify overflow-hidden">
+            <div className="annexure-proforma-page bg-white shadow-xl w-[210mm] min-h-[297mm] p-[12mm_15mm] text-slate-900 flex flex-col justify-start font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-[10pt] leading-[1.3] text-justify">
               <div className="space-y-4">
                 {/* Header */}
                 <div className="text-center space-y-1 pt-2">
@@ -849,7 +851,7 @@ ${stylesheets}
             </div>
 
             {/* PAGE 2: Beneficiary & Agency Signatures + Inspection Report + MSEDCL Officer Block */}
-            <div className="annexure-proforma-page bg-white shadow-xl w-[210mm] h-[297mm] max-h-[297mm] p-[20mm_18mm] text-slate-900 flex flex-col justify-start font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-[10pt] leading-[1.4] text-justify overflow-hidden">
+            <div className="annexure-proforma-page bg-white shadow-xl w-[210mm] min-h-[297mm] p-[20mm_18mm] text-slate-900 flex flex-col justify-start font-serif relative box-border border border-slate-300 print:shadow-none print:border-none print:m-0 text-[10pt] leading-[1.4] text-justify">
               <div className="space-y-16 pt-10">
                 {/* Top Signatures Row */}
                 <div className="flex justify-between items-start text-[10.5pt]">
